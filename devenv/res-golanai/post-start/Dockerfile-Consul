@@ -1,0 +1,11 @@
+ARG CONSUL_IMAGE
+FROM $CONSUL_IMAGE
+
+COPY post-start-consul.sh /
+
+RUN chmod +x /post-start-consul.sh && \
+    apk --update add bash coreutils jq && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm /var/cache/apk/*
+
+ENTRYPOINT ["/post-start-consul.sh"]

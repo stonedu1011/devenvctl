@@ -1,0 +1,16 @@
+{{- define "hooks-table"}}
+{{- if .}}
+        {{pad -25 "Name"}} {{pad -12 "Type"}} Value
+{{- range .}}
+        {{pad -25 .Name}} {{pad -12 .Type}} {{.Value}}
+{{- end}}
+{{- else -}}
+NONE
+{{- end -}}
+{{- end}}
+
+[{{"DEBUG"|gray_b}}] Hooks:
+    Pre-Start: {{template "hooks-table" .Hooks.Phase "pre-start"}}
+    Post-Start: {{template "hooks-table" .Hooks.Phase "post-start"}}
+    Pre-Stop: {{template "hooks-table" .Hooks.Phase "pre-stop"}}
+    Post-Stop: {{template "hooks-table" .Hooks.Phase "post-stop"}}

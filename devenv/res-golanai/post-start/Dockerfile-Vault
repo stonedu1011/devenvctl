@@ -1,0 +1,11 @@
+ARG VAULT_IMAGE
+FROM $VAULT_IMAGE
+
+COPY post-start-vault.sh /
+
+RUN chmod +x /post-start-vault.sh && \
+    apk --update add curl bash coreutils jq && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm /var/cache/apk/*
+
+ENTRYPOINT ["/post-start-vault.sh"]

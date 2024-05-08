@@ -1,0 +1,199 @@
+version: '3.9'
+  
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.102.0.0/16
+
+volumes:
+  opensearch:
+    name: "opensearch-${PROJECT_NAME}"
+    labels:
+      "devenv.persist": true
+
+services:
+#Infraservices
+  consul:
+    image: "${consul_image}"
+    container_name: "${consul_container_name}"
+    restart: "no"
+    command: ["agent", "-server", "-ui", "-client=0.0.0.0", "-bind=127.0.0.1", "-retry-join=127.0.0.1", "-bootstrap-expect=1"]
+    environment:
+      CONSUL_LOCAL_CONFIG: >
+        {
+          "acl": {
+            "enabled": true,
+            "default_policy": "deny",
+            "down_policy": "extend-cache",
+            "tokens": {
+              "master": "replace_with_token_value",
+              "default": "replace_with_token_value"
+            }
+          }
+        }
+    ports:
+      - "8500:8500/tcp"
+      - "8300:8300/tcp"
+      - "8400:8400/tcp"
+      - "8301-8302:8301-8302/tcp"
+      - "8301-8302:8301-8302/udp"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
+    volumes:
+      - "${CONTAINER_DATA_PATH}/consul:/consul/data:delegated"
+      
+  vault:
+    image: "${vault_image}"
+    container_name: "${vault_container_name}"
+    restart: "no"
+    command: ["server"]
+    environment:
+      SKIP_SETCAP: "true"
+      VAULT_ADDR: "http://localhost:8200"
+      VAULT_UI: "true"
+      VAULT_LOCAL_CONFIG: >
+        {
+          "listener": {
+            "tcp": {
+              "address": "0.0.0.0:8200",
+              "tls_disable": true,
+              "tls_disable_client_certs": true
+            }
+          },
+          "storage": {
+            "file": {
+              "path": "/vault/file/"
+            }
+          },
+          "default_lease_ttl": "87600h",
+          "max_lease_ttl": "876000h",
+          "disable_clustering": true,
+          "disable_mlock": true
+        }
+    ports:
+      - "8200:8200"
+    volumes:
+      - "${CONTAINER_DATA_PATH}/vault/file:/vault/file:delegated"
+      - "${CONTAINER_DATA_PATH}/vault/root-home:/root:delegated"
+
+  redis:
+    image: "${redis_image}"
+    container_name: "${redis_container_name}"
+    restart: "no"
+    ports:
+      - "6379:6379"
+
+  zookeeper:
+    image: "${zookeeper_image}"
+    container_name: "${zookeeper_container_name}"
+    restart: "no"
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: "${kafka_image}"
+    container_name: "${kafka_container_name}"
+    restart: "no"
+    build:
+      context: "./${RESOURCE_DIR}/kafka-wurstmeister"
+      dockerfile: Dockerfile
+      args:
+        - "kafka_version=${build_args_kafka_version}"
+        - "scala_version=${build_args_scala_version}"
+        - "glibc_version=${build_args_glibc_version}"
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # KAFKA_MESSAGE_MAX_BYTES: 2000000
+    depends_on:
+      - zookeeper
+
+  opensearch:
+    image: "${opensearch_image}"
+    container_name: "${opensearch_container_name}"
+    restart: "no"
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    environment:
+      discovery.type: "single-node"
+      cluster.name: "opensearch"
+      plugins.security.ssl.http.enabled: false
+      ES_JAVA_OPTS: "-Xms256m -Xmx256m"
+      # plugins.security.disabled: true
+    volumes:
+      - "opensearch:/usr/share/opensearch/data:delegated"
+
+  opensearch-dashboards:
+    image: "${opensearch_ui_image}"
+    container_name: "${opensearch_ui_container_name}"
+    restart: "no"
+    ports:
+      - 5601:5601
+    environment:
+      server.ssl.enabled: "false"
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      # DISABLE_SECURITY_DASHBOARDS_PLUGIN: true
+    depends_on:
+      - opensearch
+
+  cockroachdb:
+    image: "${cockroachdb_image}"
+    container_name: "${cockroachdb_container_name}"
+    restart: "no"
+    command: ["start-single-node", "--insecure", "--host=cockrachdb", "--listen-addr=:26257", "--http-addr=:26258"]
+    ports:
+      - "26257:26257"
+      - "26258:26258"
+    volumes:
+      - "${CONTAINER_DATA_PATH}/cockroachdb:/cockroach/cockroach-data:delegated"
+
+  jaeger:
+    image: "${jaeger_image}"
+    container_name: "${jaeger_container_name}"
+    restart: "no"
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+
+
+  # Post Start
+  post_start_vault:
+    image: "post-start:${PROJECT_NAME}-vault"
+    build:
+      context: "./${RESOURCE_DIR}/post-start"
+      dockerfile: Dockerfile-Vault
+      args:
+        - "VAULT_IMAGE=${vault_image}"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "replace_with_token_value"
+    volumes:
+      - "${CONTAINER_DATA_PATH}/vault/file:/vault/file:delegated"
+    depends_on:
+      - vault
+
+  post_start_consul:
+    image: "post-start:${PROJECT_NAME}-consul"
+    build:
+      context: "./${RESOURCE_DIR}/post-start"
+      dockerfile: Dockerfile-Consul
+      args:
+        - "CONSUL_IMAGE=${consul_image}"
+    depends_on:
+      - consul
+
+      
+      

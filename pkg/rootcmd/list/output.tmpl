@@ -1,0 +1,5 @@
+Available Development Environment Profiles:
+    {{pad -12 "Name"}} Definition
+{{- range .Profiles}}
+    {{pad -12 .Name | yellow_b}} {{.DisplayPath}}
+{{- end}}
