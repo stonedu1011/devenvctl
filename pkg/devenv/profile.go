@@ -5,6 +5,7 @@ import (
 	"github.com/stonedu1011/devenvctl/pkg/utils"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
 	"io/fs"
+	"path/filepath"
 )
 
 type Profiles map[string]*ProfileMetadata
@@ -13,6 +14,7 @@ type ProfileMetadata struct {
 	FS          fs.FS  `json:"-"`
 	Name        string `json:"-"`
 	Path        string `json:"-"`
+	Dir         string `json:"-"`
 	DisplayPath string `json:"-"`
 }
 
@@ -24,23 +26,26 @@ type Profile struct {
 }
 
 func (p Profile) ResourceDir() string {
-	return tmplutils.MustSprint(ResourceDirTemplate, p)
+	return tmplutils.MustSprint(TemplateResourceDir, p)
 }
 
 func (p Profile) ComposePath() string {
-	return tmplutils.MustSprint(ComposeTemplate, p)
+	return tmplutils.MustSprint(TemplateComposePath, p)
+}
+
+func (p Profile) LocalDataDir() string {
+	return tmplutils.MustSprint(TemplateLocalDataDir, p)
 }
 
 func FindProfiles(fsys fs.FS, searchPaths ...string) (Profiles, error) {
-	fsysName := fmt.Sprintf(`%v`, fsys)
 	profiles := Profiles{}
 	for _, searchPath := range searchPaths {
-		logger.Debugf(`Searching [%s] ...`, utils.AbsPath(searchPath, fsysName))
+		logger.Debugf(`Searching [%s] ...`, utils.AbsPath(searchPath, fsys))
 		e := fs.WalkDir(fsys, searchPath, func(path string, d fs.DirEntry, err error) error {
 			if d.IsDir() {
 				return nil
 			}
-			displayPath := utils.AbsPath(path, fsysName)
+			displayPath := utils.AbsPath(path, fsys)
 			var matched bool
 			defer func() {
 				if matched {
@@ -63,6 +68,7 @@ func FindProfiles(fsys fs.FS, searchPaths ...string) (Profiles, error) {
 						FS:          fsys,
 						Name:        name,
 						Path:        path,
+						Dir:         filepath.Dir(path),
 						DisplayPath: displayPath,
 					}
 					break

@@ -1,0 +1,8 @@
+[{{"INFO"|cyan}}] Data Volume Mounts:
+{{- $dataDir := .LocalDataDir}}
+{{- range .Services}}
+{{- range .Mounts}}
+    {{$dataDir}}/{{.}}
+{{- end}}
+{{- end}}
+

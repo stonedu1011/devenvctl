@@ -4,10 +4,3 @@
 {{pad 20 .DisplayName}}    {{pad -12 .DisplayVersion }} {{pad -20 .Image }}
 {{- end}}
 
-[{{"INFO"|cyan}}] Data Volumes:
-{{- range .Services}}
-{{- range .Mounts}}
-    - {{.}}
-{{- end}}
-{{- end}}
-

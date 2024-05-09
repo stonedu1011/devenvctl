@@ -34,6 +34,7 @@ func (p *ProfileV1) ToProfile() *Profile {
 			Image:          p.Services[i].ImageName,
 			Mounts:         p.Services[i].Mounts,
 			BuildArgs:      p.Services[i].BuildArgs,
+			owner:          &ret,
 		}
 	}
 	return &ret

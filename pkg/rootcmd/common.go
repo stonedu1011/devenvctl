@@ -17,7 +17,7 @@ import (
 )
 
 //go:embed *.tmpl
-var outputTmplFS embed.FS
+var OutputTmplFS embed.FS
 
 var logger = log.New("CLI")
 
@@ -89,7 +89,7 @@ func PrintHeaderRunE() cmdutils.RunE {
 			"Args":   strings.Join(args, " "),
 			"Global": GlobalArgs,
 		}
-		return tmplutils.PrintFS(outputTmplFS, "header.tmpl", tmplData)
+		return tmplutils.PrintFS(OutputTmplFS, "header.tmpl", tmplData)
 	}
 }
 
@@ -114,7 +114,14 @@ func LoadProfileRunE() cmdutils.RunE {
 		if e != nil {
 			return e
 		}
-		return tmplutils.PrintFS(outputTmplFS, "profile.tmpl", LoadedProfile)
+		if e := tmplutils.PrintFS(OutputTmplFS, "profile.tmpl", LoadedProfile); e != nil {
+			return e
+		}
+
+		if e := tmplutils.PrintFS(OutputTmplFS, "mounts.tmpl", LoadedProfile); e != nil {
+			return e
+		}
+		return nil
 	}
 }
 

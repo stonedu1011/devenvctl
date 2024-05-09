@@ -1,7 +1,6 @@
 package info
 
 import (
-	"embed"
 	"fmt"
 	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
 	"github.com/spf13/cobra"
@@ -34,20 +33,17 @@ func init() {
 	cmdutils.PersistentFlags(Cmd, &Args)
 }
 
-//go:embed *.tmpl
-var outputTmplFS embed.FS
-
 func Run(_ *cobra.Command, _ []string) error {
 	if !rootcmd.GlobalArgs.Verbose {
 		return nil
 	}
 
 	vars := devenv.VariablesBuildArg(rootcmd.LoadedProfile)
-	if e := tmplutils.PrintFS(outputTmplFS, "build_args.tmpl", vars); e != nil {
+	if e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "build_args.tmpl", vars); e != nil {
 		return e
 	}
 
-	if e := tmplutils.PrintFS(outputTmplFS, "hooks.tmpl", rootcmd.LoadedProfile); e != nil {
+	if e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "hooks.tmpl", rootcmd.LoadedProfile); e != nil {
 		return e
 	}
 	return nil

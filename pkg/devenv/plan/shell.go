@@ -1,0 +1,54 @@
+package plan
+
+import (
+	"context"
+	"fmt"
+	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
+	"strings"
+)
+
+type ShellExecutable struct {
+	Cmds []string
+	WD   string
+	Env  []string
+	Desc string
+}
+
+func (exec ShellExecutable) Exec(ctx context.Context) error {
+	if len(exec.Cmds) == 0 {
+		return nil
+	}
+	rc, e := cmdutils.RunShellCommands(ctx,
+		cmdutils.ShellDir(exec.WD),
+		cmdutils.ShellEnv(exec.Env...),
+		cmdutils.ShellCmd(exec.Cmds...),
+	)
+	switch {
+	case e != nil:
+		return e
+	case rc != 0:
+		return fmt.Errorf("shell exited with non-zero code [%d]", rc)
+	}
+	return nil
+}
+
+func (exec ShellExecutable) String() string {
+	if len(exec.Desc) == 0 {
+		exec.Desc = "Shell"
+	}
+	switch {
+	case len(exec.Cmds) == 1:
+		return fmt.Sprintf("%s: %s", exec.Desc, exec.Cmds[0])
+	case len(exec.Cmds) == 0:
+		return "no-op"
+	default:
+		return fmt.Sprintf("%s: \n%s", exec.Desc, strings.Join(exec.Cmds, ";\\  \n"))
+	}
+}
+
+func (exec ShellExecutable) WithCommands(cmds ...string) *ShellExecutable {
+	cpy := exec
+	cpy.Cmds = cmds
+	return &cpy
+}
+
