@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	RootName = "info"
+	CommandName = "info"
 )
 
 var (
 	Cmd = &cobra.Command{
-		Use:                fmt.Sprintf(`%s <profile>`, RootName),
+		Use:                fmt.Sprintf(`%s <profile>`, CommandName),
 		Short:              "Show information of specified profile",
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Args:               rootcmd.RequireProfileArgs(),

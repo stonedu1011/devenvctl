@@ -1,4 +1,4 @@
-package start
+package stop
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	CommandName = "start"
+	CommandName = "stop"
 )
 
 var (
 	Cmd = &cobra.Command{
 		Use:                fmt.Sprintf(`%s <profile>`, CommandName),
-		Short:              "Start profile",
+		Short:              "Stop profile",
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Args:               rootcmd.RequireProfileArgs(),
 		PreRunE:            rootcmd.LoadProfileRunE(),
@@ -37,7 +37,7 @@ func init() {
 func Run(cmd *cobra.Command, _ []string) error {
 	tmpDir := utils.AbsPath(rootcmd.GlobalArgs.TmpDir, rootcmd.GlobalArgs.WorkingDir)
 	planner := plan.NewDockerComposePlanner(rootcmd.LoadedProfile, tmpDir)
-	p, e := planner.Plan(plan.ActionStart)
+	p, e := planner.Plan(plan.ActionStop)
 	if e != nil {
 		return e
 	}

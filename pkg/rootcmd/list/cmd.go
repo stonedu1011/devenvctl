@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	RootName = "list"
+	CommandName = "list"
 )
 
 var (
 	Cmd    = &cobra.Command{
-		Use:                RootName,
+		Use:                CommandName,
 		Short:              "List available profiles",
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Args:               cobra.NoArgs,

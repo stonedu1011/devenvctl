@@ -133,6 +133,7 @@ func (pl *DockerComposePlanner) Plan(action Action) (ExecutionPlan, error) {
 		return nil, e
 	}
 
+	execs = append(execs, pl.cleanupPlan()...)
 	return closerPlan{
 		ExecutionPlan: NewExecutionPlan(pl.metadata, execs...),
 		closeFunc: func() error {
@@ -174,13 +175,6 @@ func (pl *DockerComposePlanner) startPlan() ([]Executable, error) {
 		return nil, e
 	}
 	plan = append(plan, post...)
-
-	// step 5 cleanup
-	cleanup, e := pl.cleanupPlan()
-	if e != nil {
-		return nil, e
-	}
-	plan = append(plan, cleanup...)
 	return plan, nil
 }
 
@@ -204,23 +198,31 @@ func (pl *DockerComposePlanner) stopPlan() ([]Executable, error) {
 	})
 
 	// step 3 post-stop hooks
-	post, e := pl.hooksPlan(devenv.PhasePostStart, lanaiutils.NewGenericSet(devenv.TypeScript))
+	post, e := pl.hooksPlan(devenv.PhasePostStop, lanaiutils.NewGenericSet(devenv.TypeScript))
 	if e != nil {
 		return nil, e
 	}
 	plan = append(plan, post...)
 
-	// step 5 cleanup
-	cleanup, e := pl.cleanupPlan()
-	if e != nil {
-		return nil, e
-	}
-	plan = append(plan, cleanup...)
 	return plan, nil
 }
 
 func (pl *DockerComposePlanner) restartPlan() ([]Executable, error) {
-	return nil, nil
+	plan := make([]Executable, 0, 10)
+	// stop
+	stop, e := pl.stopPlan()
+	if e != nil {
+		return nil, e
+	}
+	plan = append(plan, stop...)
+
+	// start
+	start, e := pl.startPlan()
+	if e != nil {
+		return nil, e
+	}
+	plan = append(plan, start...)
+	return plan, nil
 }
 
 func (pl *DockerComposePlanner) hooksPlan(phase devenv.HookPhase, types lanaiutils.GenericSet[devenv.HookType]) ([]Executable, error) {
@@ -279,7 +281,7 @@ func (pl *DockerComposePlanner) dataVolumesPlan() ([]Executable, error) {
 	}, nil
 }
 
-func (pl *DockerComposePlanner) cleanupPlan() ([]Executable, error) {
+func (pl *DockerComposePlanner) cleanupPlan() []Executable {
 	return []Executable{
 		PrintExecutable(`Pruning containers...`),
 		&ShellExecutable{
@@ -306,7 +308,7 @@ func (pl *DockerComposePlanner) cleanupPlan() ([]Executable, error) {
 			},
 			WD:   pl.WorkingDir,
 			Env:  NewShellVars(pl.metadata.Variables),
-			Desc: "prune imagesg",
+			Desc: "prune images",
 		},
-	}, nil
+	}
 }
