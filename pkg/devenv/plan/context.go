@@ -13,10 +13,6 @@ var (
 	ErrPlanNotAvailable = errors.New(`plan for given action is not available`)
 )
 
-var availableOutputColors =[]string{
-
-}
-
 const (
 	ActionStart   Action = "start"
 	ActionStop    Action = "stop"

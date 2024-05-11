@@ -158,12 +158,13 @@ func (pl *DockerComposePlanner) startPlan() ([]Executable, error) {
 	plan = append(plan, dv...)
 
 	// step 3 docker compose start
-	buildCmd := fmt.Sprintf(`docker compose -f "%s" -p "%s" build`, pl.metadata.ComposePath, pl.Profile.Name)
-	upCmd := fmt.Sprintf(`docker compose -f "%s" -p "%s" up -d --force-recreate --remove-orphans`, pl.metadata.ComposePath, pl.Profile.Name)
 	plan = append(plan, &ShellExecutable{
-		Cmds: []string{buildCmd, upCmd},
+		Cmds: []string{
+			//fmt.Sprintf(`docker compose -f "%s" -p "%s" build`, pl.metadata.ComposePath, pl.Profile.Name),
+			fmt.Sprintf(`docker compose -f "%s" -p "%s" up -d --force-recreate --remove-orphans`, pl.metadata.ComposePath, pl.Profile.Name),
+		},
 		WD:   pl.WorkingDir,
-		Env:  pl.shellVars(pl.metadata.Variables),
+		Env:  NewShellVars(pl.metadata.Variables),
 		Desc: "start services",
 	})
 
@@ -173,11 +174,49 @@ func (pl *DockerComposePlanner) startPlan() ([]Executable, error) {
 		return nil, e
 	}
 	plan = append(plan, post...)
+
+	// step 5 cleanup
+	cleanup, e := pl.cleanupPlan()
+	if e != nil {
+		return nil, e
+	}
+	plan = append(plan, cleanup...)
 	return plan, nil
 }
 
 func (pl *DockerComposePlanner) stopPlan() ([]Executable, error) {
-	return nil, nil
+	plan := make([]Executable, 0, 5)
+	// step 1 pre-stop hooks
+	pre, e := pl.hooksPlan(devenv.PhasePreStop, lanaiutils.NewGenericSet(devenv.TypeScript, devenv.TypeContainer))
+	if e != nil {
+		return nil, e
+	}
+	plan = append(plan, pre...)
+
+	// step 2 docker compose stop
+	plan = append(plan, &ShellExecutable{
+		Cmds: []string{
+			fmt.Sprintf(`docker compose -f "%s" -p "%s" down --remove-orphans`, pl.metadata.ComposePath, pl.Profile.Name),
+		},
+		WD:   pl.WorkingDir,
+		Env:  NewShellVars(pl.metadata.Variables),
+		Desc: "stop services",
+	})
+
+	// step 3 post-stop hooks
+	post, e := pl.hooksPlan(devenv.PhasePostStart, lanaiutils.NewGenericSet(devenv.TypeScript))
+	if e != nil {
+		return nil, e
+	}
+	plan = append(plan, post...)
+
+	// step 5 cleanup
+	cleanup, e := pl.cleanupPlan()
+	if e != nil {
+		return nil, e
+	}
+	plan = append(plan, cleanup...)
+	return plan, nil
 }
 
 func (pl *DockerComposePlanner) restartPlan() ([]Executable, error) {
@@ -187,7 +226,7 @@ func (pl *DockerComposePlanner) restartPlan() ([]Executable, error) {
 func (pl *DockerComposePlanner) hooksPlan(phase devenv.HookPhase, types lanaiutils.GenericSet[devenv.HookType]) ([]Executable, error) {
 	hooks, _ := pl.Profile.Hooks[phase]
 	execs := make([]Executable, 0, len(hooks))
-	vars := pl.shellVars(pl.metadata.Variables)
+	vars := NewShellVars(pl.metadata.Variables)
 	var hasContainerHooks bool
 	for i := range hooks {
 		if !types.Has(hooks[i].Type) {
@@ -196,11 +235,11 @@ func (pl *DockerComposePlanner) hooksPlan(phase devenv.HookPhase, types lanaiuti
 
 		switch hooks[i].Type {
 		case devenv.TypeScript:
-			exec, e := pl.shellHookExec(hooks[i], vars)
+			subExecs, e := NewScriptHookExecutables(hooks[i], pl.metadata.WorkingDir, vars, pl.metadata.ResourceDir)
 			if e != nil {
 				return nil, e
 			}
-			execs = append(execs, exec)
+			execs = append(execs, subExecs...)
 		case devenv.TypeContainer:
 			hasContainerHooks = true
 		default:
@@ -209,15 +248,15 @@ func (pl *DockerComposePlanner) hooksPlan(phase devenv.HookPhase, types lanaiuti
 	}
 	// All container hooks are grouped into single executable
 	if hasContainerHooks {
-		exec, e := pl.containerHookExec(hooks, phase)
+		subExecs, e := NewContainerHookExecutables(pl.dockerClient, phase, ComposeContainerResolver(pl.Profile.Name), hooks...)
 		if e != nil {
 			return nil, e
 		}
 		// Note: in post-start, we wait for container at the end. in pre-stop, we wait for container at beginning
 		if phase == devenv.PhasePostStop {
-			execs = append(execs, exec)
+			execs = append(execs, subExecs...)
 		} else {
-			execs = append([]Executable{exec}, execs...)
+			execs = append(subExecs, execs...)
 		}
 
 	}
@@ -240,61 +279,34 @@ func (pl *DockerComposePlanner) dataVolumesPlan() ([]Executable, error) {
 	}, nil
 }
 
-func (pl *DockerComposePlanner) shellVars(src []devenv.Variable) []string {
-	return utils.ConvertSlice[devenv.Variable, string](src, func(v devenv.Variable) string {
-		return v.String()
-	})
-}
-
-func (pl *DockerComposePlanner) shellHookExec(hook devenv.Hook, vars []string) (Executable, error) {
-	// note: we assume the value of hook is a script filename in resource directory
-	str, ok := hook.Value.(string)
-	if !ok {
-		return nil, fmt.Errorf(`expected hook value to be string, but got %v`, hook.Value)
-	}
-	searchPaths := []string{
-		filepath.Join(pl.metadata.ResourceDir, string(hook.Phase), str),
-		filepath.Join(pl.metadata.ResourceDir, string(hook.Phase)+"-"+str),
-	}
-	var cmd string
-	for _, path := range searchPaths {
-		if stat, e := os.Stat(path); e == nil && stat.IsDir() {
-			cmd = path
-			break
-		}
-	}
-	if len(cmd) == 0 {
-		return nil, fmt.Errorf(`hook script [%s] not found in %s`, str, filepath.Join(pl.metadata.ResourceDir, string(hook.Phase), str))
-	}
-	return &ShellExecutable{
-		Cmds: []string{cmd},
-		WD:   pl.WorkingDir,
-		Env:  vars,
-		Desc: fmt.Sprintf(`%v shell`, hook.Phase),
+func (pl *DockerComposePlanner) cleanupPlan() ([]Executable, error) {
+	return []Executable{
+		PrintExecutable(`Pruning containers...`),
+		&ShellExecutable{
+			Cmds: []string{
+				`docker container prune -f`,
+			},
+			WD:   pl.WorkingDir,
+			Env:  NewShellVars(pl.metadata.Variables),
+			Desc: "prune containers",
+		},
+		PrintExecutable(`Pruning volumes...`),
+		&ShellExecutable{
+			Cmds: []string{
+				`docker volume prune --filter "label!=devenv.persist" -f`,
+			},
+			WD:   pl.WorkingDir,
+			Env:  NewShellVars(pl.metadata.Variables),
+			Desc: "prune volumes",
+		},
+		PrintExecutable(`Pruning images...`),
+		&ShellExecutable{
+			Cmds: []string{
+				`docker image prune -f`,
+			},
+			WD:   pl.WorkingDir,
+			Env:  NewShellVars(pl.metadata.Variables),
+			Desc: "prune imagesg",
+		},
 	}, nil
-}
-
-func (pl *DockerComposePlanner) containerHookExec(hooks []devenv.Hook, phase devenv.HookPhase) (Executable, error) {
-	containers := make([]string, 0, len(hooks))
-	for i := range hooks {
-		if hooks[i].Type != devenv.TypeContainer {
-			continue
-		}
-		name, ok := hooks[i].Value.(string)
-		if !ok {
-			return nil, fmt.Errorf(`expected hook value to be string, but got %v`, hooks[i].Value)
-		}
-		containers = append(containers, name)
-	}
-	if phase == devenv.PhasePreStop && len(containers) != 0 {
-		// TODO start post container manually
-		return nil, fmt.Errorf(`container hook in pre-stop phase is not currently supported`)
-	}
-	// TODO support dynamic timeout
-	exec := NewContainerMonitorExecutable(pl.dockerClient, func(exec *ContainerMonitorExecutable) {
-		exec.Names = containers
-		exec.Desc = fmt.Sprintf(`%v containers`, phase)
-		exec.Resolver = ComposeContainerResolver(pl.Profile.Name)
-	})
-	return exec.WithTimeout(30 * time.Second), nil
 }
