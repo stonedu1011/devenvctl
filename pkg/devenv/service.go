@@ -11,7 +11,7 @@ type Service struct {
 	Image          string
 	Mounts         []string
 	BuildArgs      map[string]string
-	owner *Profile
+	owner          *Profile
 }
 
 func (s Service) ContainerName() string {

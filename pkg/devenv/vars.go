@@ -12,14 +12,14 @@ type Variable struct {
 }
 
 func (v Variable) String() string {
-	return fmt.Sprintf(`%s="%s"`, v.Name, v.Value)
+	return fmt.Sprintf(`%s=%s`, v.Name, v.Value)
 }
 
 func Variables(p *Profile) []Variable {
 	vars := make([]Variable, 0, len(p.Services)*5+2)
-	vars = append(vars, VariablesGlobal(p)...)
 	vars = append(vars, VariablesService(p)...)
 	vars = append(vars, VariablesBuildArg(p)...)
+	vars = append(vars, VariablesGlobal(p)...)
 	return vars
 }
 
@@ -54,8 +54,6 @@ func VariablesService(p *Profile) []Variable {
 func VariablesGlobal(p *Profile) []Variable {
 	vars := []Variable{
 		{Name: VarProjectName, Value: p.Name},
-		{Name: VarLocalDataPath, Value: p.LocalDataDir()},
-		{Name: VarProjectResource, Value: p.ResourceDir()},
 	}
 	sort.SliceStable(vars, func(i, j int) bool {
 		return vars[i].Name < vars[j].Name

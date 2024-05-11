@@ -9,6 +9,13 @@ import (
 	"text/template"
 )
 
+var AvailableOutputColors = []string{
+	"black", "red", "green", "yellow", "blue", "magenta", "cyan", "gray",
+}
+var AvailableOutputBoldColors = []string{
+	"black_b", "red_b", "green_b", "yellow_b", "blue_b", "magenta_b", "cyan_b", "gray_b",
+}
+
 type tmplType interface {
 	*template.Template | string | []byte
 }
@@ -20,16 +27,30 @@ func NewTemplate() *template.Template {
 		Funcs(internal.TmplColorFuncMap)
 }
 
-func MustParse(tmplText string) *template.Template {
+func Parse(tmplText string) (*template.Template, error) {
 	t, e := NewTemplate().Parse(tmplText)
+	if e != nil {
+		return nil, e
+	}
+	return t, nil
+}
+
+func MustParse(tmplText string) *template.Template {
+	t, e := Parse(tmplText)
 	if e != nil {
 		panic(e)
 	}
 	return t
 }
 
-func PrintFS(fsys fs.FS, tmplPath string, data interface{}) error {
-	tmpl, e := NewTemplate().ParseFS(fsys, tmplPath)
+func PrintFS(fsys fs.FS, tmplPath string, data interface{}, additionalTmpls ...string) error {
+	var tmpl *template.Template
+	var e error
+	if len(additionalTmpls) == 0 {
+		tmpl, e = NewTemplate().ParseFS(fsys, tmplPath)
+	} else {
+		tmpl, e = NewTemplate().ParseFS(fsys, append([]string{tmplPath}, additionalTmpls...)...)
+	}
 	if e != nil {
 		return e
 	}

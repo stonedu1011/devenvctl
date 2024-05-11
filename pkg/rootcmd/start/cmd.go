@@ -37,25 +37,22 @@ func init() {
 func Run(cmd *cobra.Command, _ []string) error {
 	tmpDir := utils.AbsPath(rootcmd.GlobalArgs.TmpDir, rootcmd.GlobalArgs.WorkingDir)
 	planner := plan.NewDockerComposePlanner(rootcmd.LoadedProfile, tmpDir)
-	execs, e := planner.Plan(plan.ActionStart)
+	p, e := planner.Plan(plan.ActionStart)
 	if e != nil {
 		return e
 	}
 
 	if rootcmd.GlobalArgs.Verbose {
-		if e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "context.tmpl", planner); e != nil {
-			return e
-		}
-
-		if e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "hooks.tmpl", rootcmd.LoadedProfile); e != nil {
+		e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "docker_plan.tmpl", p.Metadata(), "hooks.tmpl")
+		if e != nil {
 			return e
 		}
 	}
 
 	if Args.DryRun {
-		e = plan.DryRun(cmd.Context(), execs...)
+		e = p.DryRun(cmd.Context())
 	} else {
-		e = plan.Execute(cmd.Context(), execs...)
+		e = p.Execute(cmd.Context())
 	}
 
 	return e

@@ -1,0 +1,12 @@
+[{{"DEBUG"|gray_b}}] Docker: {{$padding := 16}}
+{{pad $padding "Version"}}: {{.DockerVersion.Version}}
+{{pad $padding "API Version"}}: {{.DockerVersion.APIVersion}}
+{{pad $padding "OS"}}: {{.DockerVersion.Os}}-{{.DockerVersion.Arch}} ({{.DockerVersion.KernelVersion}})
+
+[{{"DEBUG"|gray_b}}] Docker Compose Context:
+    Variables:
+{{- range .Variables}}
+        {{pad 25 .Name}} = {{.Value}}
+{{- end}}
+
+{{ template "hooks.tmpl" .Profile }}

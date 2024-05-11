@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
+	"os"
 	"strings"
 )
 
@@ -40,9 +41,9 @@ func (exec ShellExecutable) String() string {
 	case len(exec.Cmds) == 1:
 		return fmt.Sprintf("%s: %s", exec.Desc, exec.Cmds[0])
 	case len(exec.Cmds) == 0:
-		return "no-op"
+		return "NONE"
 	default:
-		return fmt.Sprintf("%s: \n%s", exec.Desc, strings.Join(exec.Cmds, ";\\  \n"))
+		return fmt.Sprintf("%s: \n    %s", exec.Desc, strings.Join(exec.Cmds, "; \\\n    "))
 	}
 }
 
@@ -52,3 +53,34 @@ func (exec ShellExecutable) WithCommands(cmds ...string) *ShellExecutable {
 	return &cpy
 }
 
+type MkdirExecutable struct {
+	Paths         []string
+	Desc          string
+}
+
+func (exec MkdirExecutable) Exec(_ context.Context) error {
+	if len(exec.Paths) == 0 {
+		return nil
+	}
+	for _, p := range exec.Paths {
+		e := os.MkdirAll(p, 0755)
+		if e != nil {
+			return fmt.Errorf(`unable to create directory [%s]: %v`, p, e)
+		}
+	}
+	return nil
+}
+
+func (exec MkdirExecutable) String() string {
+	if len(exec.Desc) == 0 {
+		exec.Desc = "mkdir"
+	}
+	switch {
+	case len(exec.Paths) == 1:
+		return fmt.Sprintf("%s: %s", exec.Desc, exec.Paths[0])
+	case len(exec.Paths) == 0:
+		return "NONE"
+	default:
+		return fmt.Sprintf("%s: \n    %s", exec.Desc, strings.Join(exec.Paths, "\n    "))
+	}
+}
