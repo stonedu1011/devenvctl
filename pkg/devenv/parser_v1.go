@@ -51,6 +51,7 @@ func (p *ProfileV1) hookConverter(phase HookPhase) func(string) Hook {
 		switch phase {
 		case PhasePreStart, PhasePostStop:
 			hook.Type = TypeScript
+		default:
 		}
 		return hook
 	}

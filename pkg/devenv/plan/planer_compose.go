@@ -283,32 +283,8 @@ func (pl *DockerComposePlanner) dataVolumesPlan() ([]Executable, error) {
 
 func (pl *DockerComposePlanner) cleanupPlan() []Executable {
 	return []Executable{
-		PrintExecutable(`Pruning containers...`),
-		&ShellExecutable{
-			Cmds: []string{
-				`docker container prune -f`,
-			},
-			WD:   pl.WorkingDir,
-			Env:  NewShellVars(pl.metadata.Variables),
-			Desc: "prune containers",
-		},
-		PrintExecutable(`Pruning volumes...`),
-		&ShellExecutable{
-			Cmds: []string{
-				`docker volume prune --filter "label!=devenv.persist" -f`,
-			},
-			WD:   pl.WorkingDir,
-			Env:  NewShellVars(pl.metadata.Variables),
-			Desc: "prune volumes",
-		},
-		PrintExecutable(`Pruning images...`),
-		&ShellExecutable{
-			Cmds: []string{
-				`docker image prune -f`,
-			},
-			WD:   pl.WorkingDir,
-			Env:  NewShellVars(pl.metadata.Variables),
-			Desc: "prune images",
-		},
+		&PruneContainersExecutable{ApiClient: pl.dockerClient},
+		&PruneVolumesExecutable{ApiClient: pl.dockerClient},
+		&PruneImagesExecutable{ApiClient: pl.dockerClient},
 	}
 }
