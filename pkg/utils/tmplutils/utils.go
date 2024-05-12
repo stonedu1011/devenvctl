@@ -3,6 +3,7 @@ package tmplutils
 import (
 	"bytes"
 	"fmt"
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils/internal"
 	"io/fs"
 	"os"
@@ -43,6 +44,28 @@ func MustParse(tmplText string) *template.Template {
 	return t
 }
 
+func ParseGlob(fsys fs.FS, patterns...string) (*template.Template, error) {
+	t := NewTemplate()
+	for _, pattern := range patterns {
+		filenames, e := doublestar.Glob(fsys, pattern, doublestar.WithFailOnIOErrors(), doublestar.WithNoFollow())
+		if e != nil {
+			return nil, e
+		}
+		if t, e = NewTemplate().ParseFS(fsys, filenames...); e != nil {
+			return nil, e
+		}
+	}
+	return t, nil
+}
+
+func MustParseGlob(fsys fs.FS, patterns...string) *template.Template {
+	t, e := ParseGlob(fsys, patterns...)
+	if e != nil {
+		panic(e)
+	}
+	return t
+}
+
 func PrintFS(fsys fs.FS, tmplPath string, data interface{}, additionalTmpls ...string) error {
 	var tmpl *template.Template
 	var e error
@@ -55,6 +78,12 @@ func PrintFS(fsys fs.FS, tmplPath string, data interface{}, additionalTmpls ...s
 		return e
 	}
 	return tmpl.ExecuteTemplate(os.Stdout, tmplPath, data)
+}
+
+func MustPrint[T tmplType](rawTmpl T, data interface{}) {
+	if e := Print(rawTmpl, data); e != nil {
+		panic(e)
+	}
 }
 
 func Print[T tmplType](rawTmpl T, data interface{}) error {
@@ -93,6 +122,8 @@ func parseTemplate[T tmplType](raw T) (t *template.Template, e error) {
 		t, e = NewTemplate().Parse(v)
 	case []byte:
 		t, e = NewTemplate().Parse(string(v))
+	case nil:
+		e = fmt.Errorf(`missing template`)
 	default:
 		e = fmt.Errorf(`unsupported type of raw template: %T`, raw)
 	}

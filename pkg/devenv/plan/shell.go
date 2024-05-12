@@ -24,11 +24,12 @@ type ShellExecutable struct {
 	Desc string
 }
 
-func (exec ShellExecutable) Exec(ctx context.Context) error {
+func (exec ShellExecutable) Exec(ctx context.Context, opts ExecOption) error {
 	if len(exec.Cmds) == 0 {
 		return nil
 	}
 	rc, e := cmdutils.RunShellCommands(ctx,
+		cmdutils.ShellShowCmd(opts.Verbose),
 		cmdutils.ShellDir(exec.WD),
 		cmdutils.ShellEnv(exec.Env...),
 		cmdutils.ShellCmd(exec.Cmds...),
@@ -67,11 +68,14 @@ type MkdirExecutable struct {
 	Desc          string
 }
 
-func (exec MkdirExecutable) Exec(_ context.Context) error {
+func (exec MkdirExecutable) Exec(ctx context.Context, opts ExecOption) error {
 	if len(exec.Paths) == 0 {
 		return nil
 	}
 	for _, p := range exec.Paths {
+		if opts.Verbose {
+			logger.WithContext(ctx).Debugf(`creating direcotry: %s`, p)
+		}
 		e := os.MkdirAll(p, 0755)
 		if e != nil {
 			return fmt.Errorf(`unable to create directory [%s]: %v`, p, e)

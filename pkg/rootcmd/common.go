@@ -1,7 +1,6 @@
 package rootcmd
 
 import (
-	"embed"
 	"errors"
 	"fmt"
 	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
@@ -9,15 +8,13 @@ import (
 	"github.com/cisco-open/go-lanai/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/stonedu1011/devenvctl/pkg/devenv"
+	"github.com/stonedu1011/devenvctl/pkg/tmpls"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 )
-
-//go:embed *.tmpl
-var OutputTmplFS embed.FS
 
 var logger = log.New("CLI")
 
@@ -38,7 +35,7 @@ var (
 type Global struct {
 	WorkingDir string `flag:"workspace,w" desc:"working directory containing profile definitions"`
 	TmpDir     string `flag:"tmp-dir" desc:"temporary directory."`
-	Verbose    bool   `flag:"debug" desc:"show debug information"`
+	Verbose    bool   `flag:"verbose,v" desc:"show debug information"`
 }
 
 func DefaultWorkingDir() string {
@@ -89,7 +86,7 @@ func PrintHeaderRunE() cmdutils.RunE {
 			"Args":   strings.Join(args, " "),
 			"Global": GlobalArgs,
 		}
-		return tmplutils.PrintFS(OutputTmplFS, "header.tmpl", tmplData)
+		return tmplutils.Print(tmpls.OutputTemplate.Lookup("header.tmpl"), tmplData)
 	}
 }
 
@@ -114,11 +111,11 @@ func LoadProfileRunE() cmdutils.RunE {
 		if e != nil {
 			return e
 		}
-		if e := tmplutils.PrintFS(OutputTmplFS, "profile.tmpl", LoadedProfile); e != nil {
+		if e := tmplutils.Print(tmpls.OutputTemplate.Lookup("profile.tmpl"), LoadedProfile); e != nil {
 			return e
 		}
 
-		if e := tmplutils.PrintFS(OutputTmplFS, "mounts.tmpl", LoadedProfile); e != nil {
+		if e := tmplutils.Print(tmpls.OutputTemplate.Lookup("mounts.tmpl"), LoadedProfile); e != nil {
 			return e
 		}
 		return nil

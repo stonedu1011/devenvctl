@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stonedu1011/devenvctl/pkg/devenv/plan"
 	"github.com/stonedu1011/devenvctl/pkg/rootcmd"
+	"github.com/stonedu1011/devenvctl/pkg/tmpls"
 	"github.com/stonedu1011/devenvctl/pkg/utils"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
 )
@@ -43,17 +44,13 @@ func Run(cmd *cobra.Command, _ []string) error {
 	}
 
 	if rootcmd.GlobalArgs.Verbose {
-		e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "docker_plan.tmpl", p.Metadata(), "hooks.tmpl")
-		if e != nil {
+		if e := tmplutils.Print(tmpls.OutputTemplate.Lookup("docker_plan.tmpl"), p.Metadata()); e != nil {
 			return e
 		}
 	}
 
-	if Args.DryRun {
-		e = p.DryRun(cmd.Context())
-	} else {
-		e = p.Execute(cmd.Context())
-	}
-
-	return e
+	return p.Execute(cmd.Context(), func(opt *plan.ExecOption) {
+		opt.DryRun = Args.DryRun
+		opt.Verbose = rootcmd.GlobalArgs.Verbose
+	})
 }

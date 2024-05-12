@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stonedu1011/devenvctl/pkg/devenv"
 	"github.com/stonedu1011/devenvctl/pkg/rootcmd"
+	"github.com/stonedu1011/devenvctl/pkg/tmpls"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
 )
 
@@ -39,11 +40,11 @@ func Run(_ *cobra.Command, _ []string) error {
 	}
 
 	vars := devenv.VariablesBuildArg(rootcmd.LoadedProfile)
-	if e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "build_args.tmpl", vars); e != nil {
+	if e := tmplutils.Print(tmpls.OutputTemplate.Lookup("build_args.tmpl"), vars); e != nil {
 		return e
 	}
 
-	if e := tmplutils.PrintFS(rootcmd.OutputTmplFS, "hooks.tmpl", rootcmd.LoadedProfile); e != nil {
+	if e := tmplutils.Print(tmpls.OutputTemplate.Lookup("hooks.tmpl"), rootcmd.LoadedProfile); e != nil {
 		return e
 	}
 	return nil

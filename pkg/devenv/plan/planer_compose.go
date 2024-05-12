@@ -134,12 +134,9 @@ func (pl *DockerComposePlanner) Plan(action Action) (ExecutionPlan, error) {
 	}
 
 	execs = append(execs, pl.cleanupPlan()...)
-	return closerPlan{
-		ExecutionPlan: NewExecutionPlan(pl.metadata, execs...),
-		closeFunc: func() error {
-			return pl.dockerClient.Close()
-		},
-	}, nil
+	return NewClosableExecutionPlan(pl.metadata, func() error {
+		return pl.dockerClient.Close()
+	}, execs...), nil
 }
 
 func (pl *DockerComposePlanner) startPlan() ([]Executable, error) {

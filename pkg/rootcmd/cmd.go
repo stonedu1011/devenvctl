@@ -7,12 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	CliName = `devenvctl`
-)
-
 var (
-	logTemplate = `{{pad -25 .time}} [{{lvl 5 .}}]: {{.msg}}`
+	logTemplate = `{{pad -25 .time}} {{lvl 0 . | printf "[%s]" | pad 23}}: {{.msg}}`
 	logProps    = log.Properties{
 		Levels: map[string]log.LoggingLevel{
 			"default": log.LevelInfo,

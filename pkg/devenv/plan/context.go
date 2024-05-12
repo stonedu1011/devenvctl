@@ -13,6 +13,8 @@ var (
 	ErrPlanNotAvailable = errors.New(`plan for given action is not available`)
 )
 
+var DefaultExecOption ExecOption
+
 const (
 	ActionStart   Action = "start"
 	ActionStop    Action = "stop"
@@ -25,15 +27,20 @@ type ExecutionPlanner interface {
 	Plan(action Action) (ExecutionPlan, error)
 }
 
+type ExecOptions func(opt *ExecOption)
+type ExecOption struct {
+	Verbose bool
+	DryRun  bool
+}
+
 type Executable interface {
-	Exec(ctx context.Context) error
+	Exec(ctx context.Context, opts ExecOption) error
 }
 
 type ExecutionPlan interface {
 	Steps() []Executable
 	Metadata() interface{}
-	Execute(ctx context.Context) error
-	DryRun(ctx context.Context) error
+	Execute(ctx context.Context, opts...ExecOptions) error
 }
 
 func NewExecutionPlan(metadata interface{}, execs ...Executable) ExecutionPlan {
@@ -56,9 +63,17 @@ func (p execPlan) Metadata() interface{} {
 	return p.meta
 }
 
-func (p execPlan) Execute(ctx context.Context) error {
+func (p execPlan) Execute(ctx context.Context, opts...ExecOptions) error {
+	opt := DefaultExecOption
+	for _, fn := range opts {
+		fn(&opt)
+	}
+
+	if opt.DryRun {
+		return p.DryRun(ctx)
+	}
 	for _, exec := range p.steps {
-		if e := exec.Exec(ctx); e != nil {
+		if e := exec.Exec(ctx, opt); e != nil {
 			return e
 		}
 	}
@@ -72,9 +87,16 @@ func (p execPlan) DryRun(ctx context.Context) error {
 	}
 	logger.WithContext(ctx).Infof("DryRun - planned steps:")
 	for _, exec := range p.steps {
-		fmt.Println(exec)
+		fmt.Printf(`    %v\n`, exec)
 	}
 	return nil
+}
+
+func NewClosableExecutionPlan(metadata interface{}, closerFunc func() error, execs ...Executable) ExecutionPlan {
+	return closerPlan{
+		ExecutionPlan: NewExecutionPlan(metadata, execs...),
+		closeFunc: closerFunc,
+	}
 }
 
 type closerPlan struct {

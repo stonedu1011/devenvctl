@@ -11,13 +11,13 @@ type TimeoutExecutableWrapper struct {
 	Delegate Executable
 }
 
-func (exec TimeoutExecutableWrapper) Exec(ctx context.Context) error {
+func (exec TimeoutExecutableWrapper) Exec(ctx context.Context, opts ExecOption) error {
 	if exec.Timeout <= 0 {
-		return exec.Delegate.Exec(ctx)
+		return exec.Delegate.Exec(ctx, opts)
 	}
 	timoutCtx, cancelFn := context.WithTimeout(ctx, exec.Timeout)
 	defer cancelFn()
-	return exec.Delegate.Exec(timoutCtx)
+	return exec.Delegate.Exec(timoutCtx, opts)
 }
 
 func (exec TimeoutExecutableWrapper) String() string {

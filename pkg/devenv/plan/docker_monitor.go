@@ -78,7 +78,7 @@ type ContainerMonitorExecutable struct {
 	tmpls     map[string]*template.Template
 }
 
-func (exec *ContainerMonitorExecutable) Exec(ctx context.Context) error {
+func (exec *ContainerMonitorExecutable) Exec(ctx context.Context, opts ExecOption) error {
 	ctx, cancelFn := context.WithCancel(ctx)
 	defer cancelFn()
 	// prepare
@@ -87,6 +87,17 @@ func (exec *ContainerMonitorExecutable) Exec(ctx context.Context) error {
 		return fmt.Errorf(`unable to find containers: %v`, e)
 	}
 	exec.prepareTemplates()
+
+	// log
+	logger.Infof(`Waiting for %s to finish ...`, exec.Desc)
+	if opts.Verbose {
+		names := make([]string, 0, len(mapping))
+		for _, v := range mapping {
+			names = append(names, v)
+		}
+		logger.Debugf("Containers: \n    %v", strings.Join(names, "\n    "))
+		logger.Infof(``)
+	}
 
 	// start monitor all containers
 	ch := make(chan containerEvent, 1)
@@ -100,7 +111,6 @@ func (exec *ContainerMonitorExecutable) Exec(ctx context.Context) error {
 	}
 
 	// wait for all containers to finish
-	logger.Infof(`Waiting for %s to finish ...`, exec.Desc)
 	finished := map[string]error{}
 	for len(finished) < len(exec.Names) {
 		select {
