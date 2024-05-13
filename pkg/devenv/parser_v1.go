@@ -4,6 +4,13 @@ import (
 	"fmt"
 	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
 	"github.com/stonedu1011/devenvctl/pkg/utils"
+	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
+)
+
+var (
+	TemplateV1ResourceDir  = tmplutils.MustParse(`{{.Dir}}/res-{{.Name}}`)
+	TemplateV1ComposePath  = tmplutils.MustParse(`{{.Dir}}/docker-compose-{{.Name}}.yml`)
+	TemplateV1LocalDataDir = tmplutils.MustParse(`/usr/local/var/dev/{{.Name}}`)
 )
 
 type ProfileV1 struct {
@@ -13,6 +20,18 @@ type ProfileV1 struct {
 	PostStart []string    `json:"post_start"`
 	PreStop   []string    `json:"pre_stop"`
 	PostStop  []string    `json:"post_stop"`
+}
+
+func (p *ProfileV1) ResourceDir() string {
+	return tmplutils.MustSprint(TemplateV1ResourceDir, p)
+}
+
+func (p *ProfileV1) ComposePath() string {
+	return tmplutils.MustSprint(TemplateV1ComposePath, p)
+}
+
+func (p *ProfileV1) LocalDataDir() string {
+	return tmplutils.MustSprint(TemplateV1LocalDataDir, p)
 }
 
 func (p *ProfileV1) ToProfile() *Profile {
@@ -37,6 +56,9 @@ func (p *ProfileV1) ToProfile() *Profile {
 			owner:          &ret,
 		}
 	}
+	ret.ResourceDir = p.ResourceDir()
+	ret.ComposePath = p.ComposePath()
+	ret.LocalDataDir = p.LocalDataDir()
 	return &ret
 }
 

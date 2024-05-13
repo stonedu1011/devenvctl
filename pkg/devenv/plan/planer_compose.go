@@ -57,7 +57,7 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	}
 
 	// load compose template
-	tmplPath := pl.Profile.ComposePath()
+	tmplPath := pl.Profile.ComposePath
 	logger.Debugf(`Loading [%s]`, tmplPath)
 	tmpl, e := tmplutils.NewTemplate().ParseFS(pl.Profile.FS, tmplPath)
 	if e != nil {
@@ -85,7 +85,7 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	}
 
 	// copy resources
-	srcResPath := pl.Profile.ResourceDir()
+	srcResPath := pl.Profile.ResourceDir
 	pl.metadata.ResourceDir = filepath.Join(pl.WorkingDir, filepath.Base(srcResPath))
 	logger.Debugf(`Copying resource files: %s`, srcResPath)
 	if e := utils.CopyDir(srcResPath, pl.metadata.ResourceDir); e != nil {
@@ -95,7 +95,7 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	// Variables
 	pl.metadata.Variables = devenv.Variables(pl.Profile)
 	pl.metadata.Variables = append(pl.metadata.Variables,
-		devenv.Variable{Name: devenv.VarLocalDataPath, Value: pl.Profile.LocalDataDir()},
+		devenv.Variable{Name: devenv.VarLocalDataPath, Value: pl.Profile.LocalDataDir},
 		devenv.Variable{Name: devenv.VarProjectResource, Value: filepath.Base(srcResPath)},
 	)
 
@@ -264,7 +264,7 @@ func (pl *DockerComposePlanner) hooksPlan(phase devenv.HookPhase, types lanaiuti
 }
 
 func (pl *DockerComposePlanner) dataVolumesPlan() ([]Executable, error) {
-	root := pl.Profile.LocalDataDir()
+	root := pl.Profile.LocalDataDir
 	paths := make([]string, 0, len(pl.Profile.Services)*2)
 	for _, s := range pl.Profile.Services {
 		for _, mount := range s.Mounts {

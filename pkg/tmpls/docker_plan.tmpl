@@ -1,9 +1,9 @@
-[{{"DEBUG"|gray_b}}] Docker: {{$padding := 16}}
+[{{"DEBUG"|gray}}] Docker: {{$padding := 16}}
 {{pad $padding "Version"}}: {{.DockerVersion.Version}}
 {{pad $padding "API Version"}}: {{.DockerVersion.APIVersion}}
 {{pad $padding "OS"}}: {{.DockerVersion.Os}}-{{.DockerVersion.Arch}} ({{.DockerVersion.KernelVersion}})
 
-[{{"DEBUG"|gray_b}}] Docker Compose:
+[{{"DEBUG"|gray}}] Docker Compose:
        Config: {{.ComposePath}}
     Variables:
 {{- range .Variables}}

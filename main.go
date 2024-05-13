@@ -7,6 +7,7 @@ import (
 	"github.com/stonedu1011/devenvctl/pkg/rootcmd/debug"
 	"github.com/stonedu1011/devenvctl/pkg/rootcmd/info"
 	"github.com/stonedu1011/devenvctl/pkg/rootcmd/list"
+	"github.com/stonedu1011/devenvctl/pkg/rootcmd/restart"
 	"github.com/stonedu1011/devenvctl/pkg/rootcmd/start"
 	"github.com/stonedu1011/devenvctl/pkg/rootcmd/stop"
 	"os"
@@ -14,16 +15,15 @@ import (
 
 const (
 	CLIName = `devenvctl`
-	BuildVersion = `unknown`
 )
 
 func main() {
-	cmd := rootcmd.New(CLIName, BuildVersion)
+	cmd := rootcmd.New(CLIName)
 	cmd.AddCommand(list.Cmd)
 	cmd.AddCommand(info.Cmd)
 	cmd.AddCommand(start.Cmd)
 	cmd.AddCommand(stop.Cmd)
-	cmd.AddCommand(stop.Cmd)
+	cmd.AddCommand(restart.Cmd)
 	cmd.AddCommand(debug.Cmd)
 
 	if e := cmd.ExecuteContext(context.Background()); e != nil {

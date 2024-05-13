@@ -32,9 +32,10 @@ var (
 )
 
 type Global struct {
-	WorkingDir string `flag:"workspace,w" desc:"working directory containing profile definitions"`
-	TmpDir     string `flag:"tmp-dir" desc:"temporary directory."`
-	Verbose    bool   `flag:"verbose,v" desc:"show debug information"`
+	WorkingDir  string   `flag:"workspace,w" desc:"working directory containing profile definitions"`
+	TmpDir      string   `flag:"tmp-dir" desc:"temporary directory."`
+	Verbose     bool     `flag:"verbose,v" desc:"show debug information"`
+	SearchPaths []string `flag:"search-paths,s" desc:"additional paths to search for profiles definitions"`
 }
 
 func DefaultWorkingDir() string {

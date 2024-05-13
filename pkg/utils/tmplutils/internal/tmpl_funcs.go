@@ -19,11 +19,6 @@ var (
 	}
 )
 
-type levelFuncs struct {
-	text  func(int) string
-	color func(interface{}) string
-}
-
 // Padding example: `{{padding -6 value}}` "{{padding 10 value}}"
 func Padding(padding int, v interface{}) string {
 	tag := "%" + strconv.Itoa(padding) + "v"
@@ -62,20 +57,21 @@ func Join(sep string, values ...interface{}) string {
 	return str
 }
 
-func Sprint(v interface{}) string {
-	switch v.(type) {
+func Sprint(val interface{}) string {
+	switch v := val.(type) {
 	case nil:
 		return ""
 	case string:
-		return v.(string)
+		return v
 	case []byte:
-		return string(v.([]byte))
+		return string(v)
 	case fmt.Stringer:
-		return v.(fmt.Stringer).String()
+		return v.String()
 	case encoding.TextMarshaler:
-		if s, e := v.(encoding.TextMarshaler).MarshalText(); e == nil {
+		if s, e := v.MarshalText(); e == nil {
 			return string(s)
 		}
 	}
-	return fmt.Sprintf("%v", v)
+	return fmt.Sprintf("%v", val)
 }
+
