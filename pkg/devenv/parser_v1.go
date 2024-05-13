@@ -18,7 +18,7 @@ type ProfileV1 struct {
 func (p *ProfileV1) ToProfile() *Profile {
 	ret := Profile{
 		ProfileMetadata: p.ProfileMetadata,
-		Services:        make([]Service, len(p.Services)),
+		Services:        map[string]Service{},
 		Hooks: Hooks{
 			PhasePreStart:  utils.ConvertSlice(p.PreStart, p.hookConverter(PhasePreStart)),
 			PhasePostStart: utils.ConvertSlice(p.PostStart, p.hookConverter(PhasePostStart)),
@@ -27,7 +27,7 @@ func (p *ProfileV1) ToProfile() *Profile {
 		},
 	}
 	for i := range p.Services {
-		ret.Services[i] = Service{
+		ret.Services[p.Services[i].Name] = Service{
 			Name:           p.Services[i].Name,
 			DisplayName:    p.Services[i].DisplayName,
 			DisplayVersion: p.Services[i].DisplayVersion,

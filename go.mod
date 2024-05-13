@@ -3,7 +3,7 @@ module github.com/stonedu1011/devenvctl
 go 1.22
 
 toolchain go1.22.2
-
+replace github.com/cisco-open/go-lanai => ../go-lanai
 require (
 	github.com/cisco-open/go-lanai v0.14.0
 	github.com/docker/docker v26.1.2+incompatible

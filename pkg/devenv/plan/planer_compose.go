@@ -11,6 +11,7 @@ import (
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -270,6 +271,7 @@ func (pl *DockerComposePlanner) dataVolumesPlan() ([]Executable, error) {
 			paths = append(paths, filepath.Join(root, mount))
 		}
 	}
+	sort.SliceStable(paths, func(i, j int) bool { return paths[i] < paths[j] })
 	return []Executable{
 		&MkdirExecutable{
 			Paths: paths,

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
 	"github.com/cisco-open/go-lanai/pkg/log"
-	"github.com/cisco-open/go-lanai/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/stonedu1011/devenvctl/pkg/devenv"
 	"github.com/stonedu1011/devenvctl/pkg/tmpls"
@@ -70,15 +69,6 @@ func RequireProfileArgs() cobra.PositionalArgs {
 	}
 }
 
-func UpdateLogLevelRunE() cmdutils.RunE {
-	return func(cmd *cobra.Command, args []string) error {
-		if GlobalArgs.Verbose {
-			log.SetLevel("default", utils.ToPtr(log.LevelDebug))
-		}
-		return nil
-	}
-}
-
 func PrintHeaderRunE() cmdutils.RunE {
 	return func(cmd *cobra.Command, args []string) error {
 		tmplData := map[string]interface{}{
@@ -120,12 +110,4 @@ func LoadProfileRunE() cmdutils.RunE {
 		}
 		return nil
 	}
-}
-
-func SearchProfiles() (loaded devenv.Profiles, err error) {
-	searchOnce.Do(func() {
-		// TODO configurable search paths
-		Profiles, err = devenv.FindProfiles(os.DirFS(GlobalArgs.WorkingDir), "devenv")
-	})
-	return Profiles, err
 }

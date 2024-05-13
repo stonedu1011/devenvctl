@@ -91,11 +91,10 @@ func (exec *ContainerMonitorExecutable) Exec(ctx context.Context, opts ExecOptio
 	// log
 	logger.Infof(`Waiting for %s to finish ...`, exec.Desc)
 	if opts.Verbose {
-		names := make([]string, 0, len(mapping))
-		for _, v := range mapping {
-			names = append(names, v)
+		logger.Debugf("Containers:")
+		for k, v := range mapping {
+			fmt.Println("    " + v + " - " + k)
 		}
-		logger.Debugf("Containers: \n    %v", strings.Join(names, "\n    "))
 		logger.Infof(``)
 	}
 
@@ -180,7 +179,6 @@ func (exec *ContainerMonitorExecutable) prepareTemplates() {
 		if tmpl, e := tmplutils.Parse(tmplText); e == nil {
 			exec.tmpls[c] = tmpl
 		}
-
 	}
 }
 

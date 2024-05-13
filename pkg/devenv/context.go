@@ -3,17 +3,9 @@ package devenv
 import (
 	"github.com/cisco-open/go-lanai/pkg/log"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
-	"regexp"
 )
 
 var logger = log.New("CLI")
-
-var (
-	RegexProfile = []*regexp.Regexp{
-		regexp.MustCompile(`devenv-(?P<profile>[a-zA-Z][\w-_]+)\.yml`),
-		regexp.MustCompile(`devenv-(?P<profile>[a-zA-Z][\w-_]+)\.yaml`),
-	}
-)
 
 var (
 	TemplateResourceDir      = tmplutils.MustParse(`{{.Dir}}/res-{{.Name}}`)

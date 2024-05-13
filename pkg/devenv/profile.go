@@ -6,6 +6,7 @@ import (
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
 	"io/fs"
 	"path/filepath"
+	"regexp"
 )
 
 type Profiles map[string]*ProfileMetadata
@@ -21,7 +22,7 @@ type ProfileMetadata struct {
 type Profile struct {
 	ProfileMetadata
 	DisplayName string
-	Services    []Service
+	Services    map[string]Service
 	Hooks       Hooks
 }
 
@@ -37,12 +38,22 @@ func (p Profile) LocalDataDir() string {
 	return tmplutils.MustSprint(TemplateLocalDataDir, p)
 }
 
-func FindProfiles(fsys fs.FS, searchPaths ...string) (Profiles, error) {
+
+func MergeProfiles(src, dest Profiles) Profiles {
+	if dest == nil {
+		dest = Profiles{}
+	}
+	for k, v := range src {
+		dest[k] = v
+	}
+	return dest
+}
+
+func FindProfiles(fsys fs.FS, dirPath string, nameRegexps ...*regexp.Regexp) (Profiles, error) {
 	profiles := Profiles{}
-	for _, searchPath := range searchPaths {
-		logger.Debugf(`Searching [%s] ...`, utils.AbsPath(searchPath, fsys))
-		e := fs.WalkDir(fsys, searchPath, func(path string, d fs.DirEntry, err error) error {
-			if d.IsDir() {
+		logger.Debugf(`Searching [%s] ...`, utils.AbsPath(dirPath, fsys))
+		e := fs.WalkDir(fsys, dirPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
 				return nil
 			}
 			displayPath := utils.AbsPath(path, fsys)
@@ -51,12 +62,13 @@ func FindProfiles(fsys fs.FS, searchPaths ...string) (Profiles, error) {
 				if matched {
 					logger.Debugf(`Matched %s`, displayPath)
 				} else {
-					logger.Debugf(`Ignored %s`, displayPath)
+					// To much logs
+					//logger.Debugf(`Ignored %s`, displayPath)
 				}
 			}()
 
 			fn := d.Name()
-			for _, regex := range RegexProfile {
+			for _, regex := range nameRegexps {
 				matchIdx := regex.SubexpIndex("profile")
 				if matches := regex.FindStringSubmatch(fn); len(matches) > matchIdx {
 					matched = true
@@ -79,7 +91,7 @@ func FindProfiles(fsys fs.FS, searchPaths ...string) (Profiles, error) {
 		if e != nil {
 			return nil, fmt.Errorf("failed to search profiles: %v", e)
 		}
-	}
+
 	return profiles, nil
 }
 

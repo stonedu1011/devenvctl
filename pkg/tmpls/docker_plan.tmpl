@@ -3,10 +3,11 @@
 {{pad $padding "API Version"}}: {{.DockerVersion.APIVersion}}
 {{pad $padding "OS"}}: {{.DockerVersion.Os}}-{{.DockerVersion.Arch}} ({{.DockerVersion.KernelVersion}})
 
-[{{"DEBUG"|gray_b}}] Docker Compose Context:
+[{{"DEBUG"|gray_b}}] Docker Compose:
+       Config: {{.ComposePath}}
     Variables:
 {{- range .Variables}}
-        {{pad 25 .Name}} = {{.Value}}
+        {{pad 30 .Name}} = {{.Value}}
 {{- end}}
 
 {{ template "hooks.tmpl" .Profile }}

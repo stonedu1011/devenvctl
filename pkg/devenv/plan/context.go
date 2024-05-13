@@ -85,9 +85,9 @@ func (p execPlan) DryRun(ctx context.Context) error {
 		logger.WithContext(ctx).Infof("DryRun - Planned Steps: NONE")
 		return nil
 	}
-	logger.WithContext(ctx).Infof("DryRun - planned steps:")
+	logger.WithContext(ctx).Infof("DryRun - Planned Steps:")
 	for _, exec := range p.steps {
-		fmt.Printf(`    %v\n`, exec)
+		fmt.Printf("- %v\n", exec)
 	}
 	return nil
 }
