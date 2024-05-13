@@ -38,7 +38,6 @@ func (p Profile) LocalDataDir() string {
 	return tmplutils.MustSprint(TemplateLocalDataDir, p)
 }
 
-
 func MergeProfiles(src, dest Profiles) Profiles {
 	if dest == nil {
 		dest = Profiles{}
@@ -53,17 +52,18 @@ func FindProfiles(fsys fs.FS, dirPath string, nameRegexps ...*regexp.Regexp) (Pr
 	profiles := Profiles{}
 		logger.Debugf(`Searching [%s] ...`, utils.AbsPath(dirPath, fsys))
 		e := fs.WalkDir(fsys, dirPath, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
+			displayPath := utils.AbsPath(path, fsys)
+			switch {
+			case err != nil:
+				logger.Debugf(`Ignoring [%s]: %v`, displayPath, err)
+				fallthrough
+			case d.IsDir():
 				return nil
 			}
-			displayPath := utils.AbsPath(path, fsys)
 			var matched bool
 			defer func() {
 				if matched {
-					logger.Debugf(`Matched %s`, displayPath)
-				} else {
-					// To much logs
-					//logger.Debugf(`Ignored %s`, displayPath)
+					logger.Debugf(`Matched [%s]`, displayPath)
 				}
 			}()
 
