@@ -91,7 +91,18 @@ Each profile is composed by following components:
 - A docker compose YAML template with name `docker-compose-<profile-name>.yml`. This template is used to generate final `docker-compose.yml`.
 - A folder with name `res-<profile-name>`, which contains all extra files you may need to build your customized docker images.
 
-Example: [golanai](devenv)
+Example: `golanai` profile
+
+[presets](pkg/devenv/presets)/<br>
+|-- [devenv-golanai.yml](pkg/devenv/presets/devenv-golanai.yml)<br>
+|-- [docker-compose-golanai.yml](pkg/devenv/presets/docker-compose-golanai.yml)<br>
+|-- [res-golanai](pkg/devenv/presets/res-golanai)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|-- [cockroachdb](pkg/devenv/presets/res-golanai/cockroachdb)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|--  ...<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|---- [kafka-wurstmeister](pkg/devenv/presets/res-golanai/kafka-wurstmeister)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- ...<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|---- [post-start](pkg/devenv/presets/res-golanai/post-start)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- ...<br>
 
 <br>
 

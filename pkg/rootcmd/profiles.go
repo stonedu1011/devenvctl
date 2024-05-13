@@ -3,6 +3,7 @@ package rootcmd
 import (
 	"fmt"
 	"github.com/stonedu1011/devenvctl/pkg/devenv"
+	"github.com/stonedu1011/devenvctl/pkg/devenv/presets"
 	"github.com/stonedu1011/devenvctl/pkg/utils"
 	"io/fs"
 	"os"
@@ -46,7 +47,14 @@ type profileSource struct {
 }
 
 func resolveProfileSources() []profileSource {
-	srcs := make([]profileSource, 0, 3)
+	//srcs := make([]profileSource, 0, 5)
+	srcs := []profileSource{
+		{
+			fsys:    presets.ProfilesFS,
+			dir:     ".",
+			regexps: RegexProfile,
+		},
+	}
 	homeDir, _ := os.UserHomeDir()
 	// Home directory
 	if len(homeDir) != 0 {

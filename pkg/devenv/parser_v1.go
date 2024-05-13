@@ -5,6 +5,7 @@ import (
 	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
 	"github.com/stonedu1011/devenvctl/pkg/utils"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
+	"path/filepath"
 )
 
 var (
@@ -23,15 +24,15 @@ type ProfileV1 struct {
 }
 
 func (p *ProfileV1) ResourceDir() string {
-	return tmplutils.MustSprint(TemplateV1ResourceDir, p)
+	return filepath.Clean(tmplutils.MustSprint(TemplateV1ResourceDir, p))
 }
 
 func (p *ProfileV1) ComposePath() string {
-	return tmplutils.MustSprint(TemplateV1ComposePath, p)
+	return filepath.Clean(tmplutils.MustSprint(TemplateV1ComposePath, p))
 }
 
 func (p *ProfileV1) LocalDataDir() string {
-	return tmplutils.MustSprint(TemplateV1LocalDataDir, p)
+	return filepath.Clean(tmplutils.MustSprint(TemplateV1LocalDataDir, p))
 }
 
 func (p *ProfileV1) ToProfile() *Profile {

@@ -57,7 +57,7 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	}
 
 	// load compose template
-	tmplPath := pl.Profile.ComposePath
+	tmplPath := filepath.Clean(pl.Profile.ComposePath)
 	logger.Debugf(`Loading [%s]`, tmplPath)
 	tmpl, e := tmplutils.NewTemplate().ParseFS(pl.Profile.FS, tmplPath)
 	if e != nil {
@@ -88,7 +88,7 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	srcResPath := pl.Profile.ResourceDir
 	pl.metadata.ResourceDir = filepath.Join(pl.WorkingDir, filepath.Base(srcResPath))
 	logger.Debugf(`Copying resource files: %s`, srcResPath)
-	if e := utils.CopyDir(srcResPath, pl.metadata.ResourceDir); e != nil {
+	if e := utils.CopyDir(pl.Profile.FS, srcResPath, pl.metadata.ResourceDir); e != nil {
 		return e
 	}
 

@@ -64,7 +64,7 @@ func FindProfiles(fsys fs.FS, dirPath string, nameRegexps ...*regexp.Regexp) (Pr
 				matched = true
 				name := matches[matchIdx]
 				if existing, ok := profiles[name]; ok {
-					return fmt.Errorf(`found multiple definition files of same profile "%s": "%s" and "%s"`, name, existing, path)
+					logger.Debugf(`found multiple definition files of same profile "%s": "%s" and "%s"`, name, existing, path)
 				}
 				profiles[name] = &ProfileMetadata{
 					FS:          fsys,
