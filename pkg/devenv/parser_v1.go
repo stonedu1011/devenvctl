@@ -68,13 +68,11 @@ func (p *ProfileV1) hookConverter(phase HookPhase) func(string) Hook {
 		hook := Hook{
 			Name:  value,
 			Phase: phase,
-			Type:  TypeContainer,
+			Type:  TypeScript,
 			Value: value,
 		}
-		switch phase {
-		case PhasePreStart, PhasePostStop:
-			hook.Type = TypeScript
-		default:
+		if phase == PhasePostStart {
+			hook.Type = TypeContainer
 		}
 		return hook
 	}

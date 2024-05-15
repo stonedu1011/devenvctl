@@ -2,15 +2,6 @@ package devenv
 
 type Hooks map[HookPhase][]Hook
 
-//// RawMap a template friendly raw map
-//func (h Hooks) RawMap() map[string][]Hook {
-//	m := map[string][]Hook{}
-//	for k, v := range h {
-//		m[string(k)] = v
-//	}
-//	return m
-//}
-
 func (h Hooks) Phase(phaseStr HookPhase) []Hook {
 	hooks, _ := h[phaseStr]
 	return hooks

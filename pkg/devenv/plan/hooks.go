@@ -26,7 +26,7 @@ func NewScriptHookExecutables(hook devenv.Hook, wd string, vars []string, search
 
 	var cmd string
 	for _, path := range searchPaths {
-		if stat, e := os.Stat(path); e == nil && stat.IsDir() {
+		if stat, e := os.Stat(path); e == nil && !stat.IsDir() {
 			cmd = path
 			break
 		}
@@ -44,8 +44,18 @@ func NewScriptHookExecutables(hook devenv.Hook, wd string, vars []string, search
 	return []Executable{exec}, nil
 }
 
-func NewContainerHookExecutables(dockerClient *dockerclient.Client, phase devenv.HookPhase, cResolver ContainerResolver, hooks ...devenv.Hook) ([]Executable, error) {
+// NewContainerHookExecutables create an executable that monitor existing containers and wait for it to stop
+// Note: Currently, we don't support manually start containers. So the hook containers should be started.
+//       Therefore, only post-start containers are possible.
+func NewContainerHookExecutables(dockerClient *dockerclient.Client, phase devenv.HookPhase,
+	_ DockerComposePlanMetadata, cResolver ContainerResolver, hooks ...devenv.Hook) ([]Executable, error) {
+
+	if phase != devenv.PhasePostStart {
+		return nil, fmt.Errorf(`container hooks are only supported in post-start phase`)
+	}
+
 	containers := make([]string, 0, len(hooks))
+	execs := make([]Executable, 0, 2)
 	for i := range hooks {
 		if hooks[i].Type != devenv.TypeContainer {
 			continue
@@ -56,15 +66,12 @@ func NewContainerHookExecutables(dockerClient *dockerclient.Client, phase devenv
 		}
 		containers = append(containers, name)
 	}
-	if phase == devenv.PhasePreStop && len(containers) != 0 {
-		// TODO start post container manually
-		return nil, fmt.Errorf(`container hook in pre-stop phase is not currently supported`)
-	}
 	// TODO support dynamic timeout
 	exec := NewContainerMonitorExecutable(dockerClient, func(exec *ContainerMonitorExecutable) {
 		exec.Names = containers
 		exec.Desc = fmt.Sprintf(`%v containers`, phase)
 		exec.Resolver = cResolver
 	})
-	return []Executable{exec.WithTimeout(30 * time.Second)}, nil
+	execs = append(execs, exec.WithTimeout(30 * time.Second))
+	return execs, nil
 }

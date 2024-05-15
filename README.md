@@ -91,7 +91,31 @@ Each profile is composed by following components:
 - A docker compose YAML template with name `docker-compose-<profile-name>.yml`. This template is used to generate final `docker-compose.yml`.
 - A folder with name `res-<profile-name>`, which contains all extra files you may need to build your customized docker images.
 
-Example: `golanai` profile
+#### Example 1: [example-v1](examples)
+
+This example demonstrate 
+- how to use hooks to run containers or scripts during start/stop
+- how to use custom images
+- how to use `docker-compose-<name>.yml` as a GO template
+
+[examples](examples)/<br>
+|-- [devenv-example-v1.yml](examples/devenv-example-v1.yml)<br>
+|-- [docker-compose-example-v1.yml](examples/docker-compose-example-v1.yml)<br>
+|-- [res-example-v1](examples/res-example-v1)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|---- [kafka-wurstmeister](examples/res-example-v1/kafka-wurstmeister)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- files to build custom images<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|---- [pre-start](examples/res-example-v1/pre-start)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- scripts to run before `start`<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|---- [post-start](examples/res-example-v1/post-start)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- files to build containers that will be run during `start` after services are UP<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|---- [pre-stop](examples/res-example-v1/post-start)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- scripts to run before `stop`<br>
+&nbsp;&nbsp;&nbsp;&nbsp;|---- [post-stop](examples/res-example-v1/post-start)/<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- scripts to run after `stop`, before cleanup<br>
+
+#### Example 2: [golanai](pkg/devenv/presets) profile
+
+This is a built-in profile (presets), used for development of microservice framework [go-lanai](https://github.com/cisco-open/go-lanai). 
 
 [presets](pkg/devenv/presets)/<br>
 |-- [devenv-golanai.yml](pkg/devenv/presets/devenv-golanai.yml)<br>

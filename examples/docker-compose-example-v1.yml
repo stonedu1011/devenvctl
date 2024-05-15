@@ -8,17 +8,11 @@ networks:
       config:
         - subnet: 10.102.0.0/16
 
-volumes:
-  opensearch:
-    name: "opensearch-${PROJECT_NAME}"
-    labels:
-      "devenv.persist": true
-
 services:
 #Infraservices
   consul:
-    image: "${consul_image}"
-    container_name: "${consul_container_name}"
+    image: "{{.Profile.Services.consul.Image}}"
+    container_name: "{{.Profile.Services.consul.ContainerName}}"
     restart: "no"
     command: ["agent", "-server", "-ui", "-client=0.0.0.0", "-bind=127.0.0.1", "-retry-join=127.0.0.1", "-bootstrap-expect=1"]
     environment:
@@ -43,11 +37,11 @@ services:
       - "8600:8600/tcp"
       - "8600:8600/udp"
     volumes:
-      - "${CONTAINER_DATA_PATH}/consul:/consul/data:delegated"
+      - "{{.LocalDataDir}}/consul:/consul/data:delegated"
       
   vault:
-    image: "${vault_image}"
-    container_name: "${vault_container_name}"
+    image: "{{.Profile.Services.vault.Image}}"
+    container_name: "{{.Profile.Services.vault.ContainerName}}"
     restart: "no"
     command: ["server"]
     environment:
@@ -76,34 +70,48 @@ services:
     ports:
       - "8200:8200"
     volumes:
-      - "${CONTAINER_DATA_PATH}/vault/file:/vault/file:delegated"
-      - "${CONTAINER_DATA_PATH}/vault/root-home:/root:delegated"
+      - "{{.LocalDataDir}}/vault/file:/vault/file:delegated"
+      - "{{.LocalDataDir}}/vault/root-home:/root:delegated"
 
   redis:
-    image: "${redis_image}"
-    container_name: "${redis_container_name}"
+    image: "{{.Profile.Services.redis.Image}}"
+    container_name: "{{.Profile.Services.redis.ContainerName}}"
     restart: "no"
     ports:
       - "6379:6379"
 
+  postgres:
+    image: "{{.Profile.Services.postgres.Image}}"
+    container_name: "{{.Profile.Services.postgres.ContainerName}}"
+    restart: "no"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+      - "26257:5432" # To be compatible with CockroachDB
+    volumes:
+      - "{{.LocalDataDir}}/postgres:/var/lib/postgresql/data:delegated"
+
   zookeeper:
-    image: "${zookeeper_image}"
-    container_name: "${zookeeper_container_name}"
+    image: "{{.Profile.Services.zookeeper.Image}}"
+    container_name: "{{.Profile.Services.zookeeper.ContainerName}}"
     restart: "no"
     ports:
       - "2181:2181"
 
   kafka:
-    image: "${kafka_image}"
-    container_name: "${kafka_container_name}"
+    image: "{{.Profile.Services.kafka.Image}}"
+    container_name: "{{.Profile.Services.kafka.ContainerName}}"
     restart: "no"
     build:
-      context: "./${RESOURCE_DIR}/kafka-wurstmeister"
+      context: "{{.ResourceDir}}/kafka-wurstmeister"
       dockerfile: Dockerfile
       args:
-        - "kafka_version=${build_args_kafka_version}"
-        - "scala_version=${build_args_scala_version}"
-        - "glibc_version=${build_args_glibc_version}"
+        - "kafka_version={{.Profile.Services.kafka.BuildArgs.kafka_version}}"
+        - "scala_version={{.Profile.Services.kafka.BuildArgs.scala_version}}"
+        - "glibc_version={{.Profile.Services.kafka.BuildArgs.glibc_version}}"
     ports:
       - "9092:9092"
     environment:
@@ -113,49 +121,9 @@ services:
     depends_on:
       - zookeeper
 
-  opensearch:
-    image: "${opensearch_image}"
-    container_name: "${opensearch_container_name}"
-    restart: "no"
-    ports:
-      - "9200:9200"
-      - "9600:9600"
-    environment:
-      discovery.type: "single-node"
-      cluster.name: "opensearch"
-      plugins.security.ssl.http.enabled: false
-      ES_JAVA_OPTS: "-Xms256m -Xmx256m"
-      # plugins.security.disabled: true
-    volumes:
-      - "opensearch:/usr/share/opensearch/data:delegated"
-
-  opensearch-dashboards:
-    image: "${opensearch_ui_image}"
-    container_name: "${opensearch_ui_container_name}"
-    restart: "no"
-    ports:
-      - 5601:5601
-    environment:
-      server.ssl.enabled: "false"
-      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
-      # DISABLE_SECURITY_DASHBOARDS_PLUGIN: true
-    depends_on:
-      - opensearch
-
-  cockroachdb:
-    image: "${cockroachdb_image}"
-    container_name: "${cockroachdb_container_name}"
-    restart: "no"
-    command: ["start-single-node", "--insecure", "--host=cockrachdb", "--listen-addr=:26257", "--http-addr=:26258"]
-    ports:
-      - "26257:26257"
-      - "26258:26258"
-    volumes:
-      - "${CONTAINER_DATA_PATH}/cockroachdb:/cockroach/cockroach-data:delegated"
-
   jaeger:
-    image: "${jaeger_image}"
-    container_name: "${jaeger_container_name}"
+    image: "{{.Profile.Services.jaeger.Image}}"
+    container_name: "{{.Profile.Services.jaeger.ContainerName}}"
     restart: "no"
     ports:
       - "5775:5775/udp"
@@ -171,29 +139,29 @@ services:
 
 
   # Post Start
-  post_start_vault:
-    image: "post-start:${PROJECT_NAME}-vault"
+  post-start-vault:
+    image: "post-start:{{.Profile.Name}}-vault"
+    container_name: "{{.Profile.Name}}-post-start-vault"
     build:
-      context: "./${RESOURCE_DIR}/post-start"
+      context: "{{.ResourceDir}}/post-start"
       dockerfile: Dockerfile-Vault
       args:
-        - "VAULT_IMAGE=${vault_image}"
+        - "VAULT_IMAGE={{.Profile.Services.vault.Image}}"
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: "replace_with_token_value"
     volumes:
-      - "${CONTAINER_DATA_PATH}/vault/file:/vault/file:delegated"
+      - "{{.LocalDataDir}}/vault/file:/vault/file:delegated"
     depends_on:
       - vault
 
-  post_start_consul:
-    image: "post-start:${PROJECT_NAME}-consul"
+  post-start-consul:
+    image: "post-start:{{.Profile.Name}}-consul"
+    container_name: "{{.Profile.Name}}-post-start-consul"
     build:
-      context: "./${RESOURCE_DIR}/post-start"
+      context: "{{.ResourceDir}}/post-start"
       dockerfile: Dockerfile-Consul
       args:
-        - "CONSUL_IMAGE=${consul_image}"
+        - "CONSUL_IMAGE={{.Profile.Services.consul.Image}}"
     depends_on:
       - consul
 
-      
-      

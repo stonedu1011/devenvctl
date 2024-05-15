@@ -23,6 +23,13 @@ services:
     display_version: 6.2.x
     image: redis:6.2-alpine
   -
+    service: postgres
+    display_name: PostgreSQL
+    display_version: 16.x.x
+    image: postgres:16-alpine
+    mounts:
+      - postgres
+  -
     service: zookeeper
     display_name: ZooKeeper
     display_version: 3.7.x
@@ -39,42 +46,26 @@ services:
       scala_version: 2.13
       glibc_version: 2.34-r0
   -
-    service: opensearch
-    display_name: Opensearch
-    display_version: 2.6.0
-    image: opensearchproject/opensearch:2.6.0
-  -
-    service: opensearch_ui
-    display_name: Opensearch Dashboard
-    display_version: 2.6.0
-    image: opensearchproject/opensearch-dashboards:2.6.0
-  -
-    service: cockroachdb
-    display_name: CockroachDB
-    display_version: 22.2.x
-    image: cockroachdb/cockroach:latest-v22.2
-    mounts:
-      - cockroachdb
-  -
     service: jaeger
     display_name: JaegerTracing
     display_version: Latest 1.x
     image: jaegertracing/all-in-one:1
 
 
-# pre_start should be shell scripts
-#pre_start:
-#  - pre-start-optest.sh
-  
-# pre_stop should be shell scripts  
-#pre_stop:
-#  - 
+# pre_start should be shell scripts, path relative to ${RESOURCE_DIR}/pre-start/
+pre_start:
+  - pre-start-example.sh
+
   
 # post_start should be post start containers
 post_start:
-  - post_start_vault
-  - post_start_consul
+  - post-start-vault
+  - post-start-consul
 
+# pre_stop should be pre stop scripts, path relative to ${RESOURCE_DIR}/pre-stop/
+pre_stop:
+  - pre-stop-example.sh
 
-
-    
+# post_stop should be shell scripts, path relative to ${RESOURCE_DIR}/post-stop/
+post_stop:
+  - post-stop-example.sh

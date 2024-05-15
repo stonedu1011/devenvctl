@@ -24,6 +24,7 @@ type DockerComposePlanMetadata struct {
 	DockerVersion types.Version
 	ComposePath   string
 	ResourceDir   string
+	LocalDataDir  string
 }
 
 func NewDockerComposePlanner(p *devenv.Profile, wd string) *DockerComposePlanner {
@@ -52,8 +53,38 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 
 	// generate metadata
 	pl.metadata = DockerComposePlanMetadata{
-		Profile:    pl.Profile,
-		WorkingDir: pl.WorkingDir,
+		Profile:      pl.Profile,
+		WorkingDir:   pl.WorkingDir,
+		LocalDataDir: pl.Profile.LocalDataDir,
+	}
+
+	// copy resources
+	srcResPath := pl.Profile.ResourceDir
+	pl.metadata.ResourceDir = filepath.Join(pl.WorkingDir, filepath.Base(srcResPath))
+	logger.Debugf(`Copying resource files: %s`, srcResPath)
+	if e := utils.CopyDir(pl.Profile.FS, srcResPath, pl.metadata.ResourceDir); e != nil {
+		return e
+	}
+
+	// Variables
+	pl.metadata.Variables = devenv.Variables(pl.Profile)
+	pl.metadata.Variables = append(pl.metadata.Variables,
+		devenv.Variable{Name: devenv.VarLocalDataPath, Value: pl.Profile.LocalDataDir},
+		devenv.Variable{Name: devenv.VarProjectResource, Value: filepath.Base(srcResPath)},
+	)
+
+	// prepare a docker client (this client is not for docker compose)
+	var e error
+	pl.dockerClient, e = dockerclient.NewClientWithOpts(dockerclient.WithAPIVersionNegotiation())
+	if e != nil {
+		return fmt.Errorf("docker client not available: %v", e)
+	}
+
+	// docker version
+	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFn()
+	if pl.metadata.DockerVersion, e = pl.dockerClient.ServerVersion(ctx); e != nil {
+		return e
 	}
 
 	// load compose template
@@ -80,36 +111,8 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	defer func() { _ = composeF.Close() }()
 
 	// generate docker-compose.yml
-	if e := tmpl.ExecuteTemplate(composeF, filepath.Base(tmplPath), pl); e != nil {
+	if e := tmpl.ExecuteTemplate(composeF, filepath.Base(tmplPath), pl.metadata); e != nil {
 		return fmt.Errorf(`unable to generate docker compose [%s]: %v`, pl.metadata.ComposePath, e)
-	}
-
-	// copy resources
-	srcResPath := pl.Profile.ResourceDir
-	pl.metadata.ResourceDir = filepath.Join(pl.WorkingDir, filepath.Base(srcResPath))
-	logger.Debugf(`Copying resource files: %s`, srcResPath)
-	if e := utils.CopyDir(pl.Profile.FS, srcResPath, pl.metadata.ResourceDir); e != nil {
-		return e
-	}
-
-	// Variables
-	pl.metadata.Variables = devenv.Variables(pl.Profile)
-	pl.metadata.Variables = append(pl.metadata.Variables,
-		devenv.Variable{Name: devenv.VarLocalDataPath, Value: pl.Profile.LocalDataDir},
-		devenv.Variable{Name: devenv.VarProjectResource, Value: filepath.Base(srcResPath)},
-	)
-
-	// prepare a docker client (this client is not for docker compose)
-	pl.dockerClient, e = dockerclient.NewClientWithOpts(dockerclient.WithAPIVersionNegotiation())
-	if e != nil {
-		return fmt.Errorf("docker client not available: %v", e)
-	}
-
-	// docker version
-	ctx, cancelFn := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelFn()
-	if pl.metadata.DockerVersion, e = pl.dockerClient.ServerVersion(ctx); e != nil {
-		return e
 	}
 	return nil
 }
@@ -142,19 +145,19 @@ func (pl *DockerComposePlanner) Plan(action Action) (ExecutionPlan, error) {
 
 func (pl *DockerComposePlanner) startPlan() ([]Executable, error) {
 	plan := make([]Executable, 0, 5)
-	// step 1 pre-start hooks
-	pre, e := pl.hooksPlan(devenv.PhasePreStart, lanaiutils.NewGenericSet(devenv.TypeScript))
-	if e != nil {
-		return nil, e
-	}
-	plan = append(plan, pre...)
-
-	// step 2 create data folders if not exist
+	// step 1 create data folders if not exist
 	dv, e := pl.dataVolumesPlan()
 	if e != nil {
 		return nil, e
 	}
 	plan = append(plan, dv...)
+
+	// step 2 pre-start hooks
+	pre, e := pl.hooksPlan(devenv.PhasePreStart, lanaiutils.NewGenericSet(devenv.TypeScript))
+	if e != nil {
+		return nil, e
+	}
+	plan = append(plan, pre...)
 
 	// step 3 docker compose start
 	plan = append(plan, &ShellExecutable{
@@ -179,7 +182,7 @@ func (pl *DockerComposePlanner) startPlan() ([]Executable, error) {
 func (pl *DockerComposePlanner) stopPlan() ([]Executable, error) {
 	plan := make([]Executable, 0, 5)
 	// step 1 pre-stop hooks
-	pre, e := pl.hooksPlan(devenv.PhasePreStop, lanaiutils.NewGenericSet(devenv.TypeScript, devenv.TypeContainer))
+	pre, e := pl.hooksPlan(devenv.PhasePreStop, lanaiutils.NewGenericSet(devenv.TypeScript))
 	if e != nil {
 		return nil, e
 	}
@@ -230,7 +233,7 @@ func (pl *DockerComposePlanner) hooksPlan(phase devenv.HookPhase, types lanaiuti
 	var hasContainerHooks bool
 	for i := range hooks {
 		if !types.Has(hooks[i].Type) {
-			return nil, fmt.Errorf(`hooks at phase [%v] only support %v types`, phase, types)
+			return nil, fmt.Errorf(`hooks at phase [%v] only support %v types`, phase, types.Values())
 		}
 
 		switch hooks[i].Type {
@@ -248,7 +251,7 @@ func (pl *DockerComposePlanner) hooksPlan(phase devenv.HookPhase, types lanaiuti
 	}
 	// All container hooks are grouped into single executable
 	if hasContainerHooks {
-		subExecs, e := NewContainerHookExecutables(pl.dockerClient, phase, ComposeContainerResolver(pl.Profile.Name), hooks...)
+		subExecs, e := NewContainerHookExecutables(pl.dockerClient, phase, pl.metadata, ComposeContainerResolver(pl.Profile.Name), hooks...)
 		if e != nil {
 			return nil, e
 		}
