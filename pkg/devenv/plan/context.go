@@ -3,7 +3,6 @@ package plan
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/cisco-open/go-lanai/pkg/log"
 )
 
@@ -70,7 +69,7 @@ func (p execPlan) Execute(ctx context.Context, opts...ExecOptions) error {
 	}
 
 	if opt.DryRun {
-		return p.DryRun(ctx)
+		p.prepareDryRun(ctx)
 	}
 	for _, exec := range p.steps {
 		if e := exec.Exec(ctx, opt); e != nil {
@@ -80,16 +79,12 @@ func (p execPlan) Execute(ctx context.Context, opts...ExecOptions) error {
 	return nil
 }
 
-func (p execPlan) DryRun(ctx context.Context) error {
+func (p execPlan) prepareDryRun(ctx context.Context) {
 	if len(p.steps) == 0 {
 		logger.WithContext(ctx).Infof("DryRun - Planned Steps: NONE")
-		return nil
+		return
 	}
 	logger.WithContext(ctx).Infof("DryRun - Planned Steps:")
-	for _, exec := range p.steps {
-		fmt.Printf("- %v\n", exec)
-	}
-	return nil
 }
 
 func NewClosableExecutionPlan(metadata interface{}, closerFunc func() error, execs ...Executable) ExecutionPlan {

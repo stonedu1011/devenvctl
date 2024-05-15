@@ -45,6 +45,10 @@ type PruneContainersExecutable struct {
 }
 
 func (exec *PruneContainersExecutable) Exec(ctx context.Context, opts ExecOption) error {
+	if opts.DryRun {
+		fmt.Printf("- %v\n", exec)
+		return nil
+	}
 	logger.WithContext(ctx).Infof(`Pruning containers...`)
 	report, e := exec.ApiClient.ContainersPrune(ctx, filters.NewArgs())
 	if e != nil {
@@ -69,6 +73,10 @@ type PruneVolumesExecutable struct {
 }
 
 func (exec *PruneVolumesExecutable) Exec(ctx context.Context, opts ExecOption) error {
+	if opts.DryRun {
+		fmt.Printf("- %v\n", exec)
+		return nil
+	}
 	logger.WithContext(ctx).Infof(`Pruning volumes...`)
 	report, e := exec.ApiClient.VolumesPrune(ctx, filters.NewArgs(filters.Arg("label!", "devenv.persist")))
 	if e != nil {
@@ -93,6 +101,10 @@ type PruneImagesExecutable struct {
 }
 
 func (exec *PruneImagesExecutable) Exec(ctx context.Context, opts ExecOption) error {
+	if opts.DryRun {
+		fmt.Printf("- %v\n", exec)
+		return nil
+	}
 	logger.WithContext(ctx).Infof(`Pruning images...`)
 	report, e := exec.ApiClient.ImagesPrune(ctx, filters.NewArgs())
 	if e != nil {

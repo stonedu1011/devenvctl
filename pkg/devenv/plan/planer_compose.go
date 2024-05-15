@@ -160,10 +160,12 @@ func (pl *DockerComposePlanner) startPlan() ([]Executable, error) {
 	plan = append(plan, pre...)
 
 	// step 3 docker compose start
-	plan = append(plan, &ShellExecutable{
-		Cmds: []string{
-			//fmt.Sprintf(`docker compose -f "%s" -p "%s" build`, pl.metadata.ComposePath, pl.Profile.Name),
-			fmt.Sprintf(`docker compose -f "%s" -p "%s" up -d --force-recreate --remove-orphans`, pl.metadata.ComposePath, pl.Profile.Name),
+	//fmt.Sprintf(`docker compose -f "%s" -p "%s" build`, pl.metadata.ComposePath, pl.Profile.Name),
+	plan = append(plan, &ComposeShellExecutable{
+		Args: []string{
+			fmt.Sprintf(`-f "%s"`, pl.metadata.ComposePath),
+			fmt.Sprintf(`-p "%s"`, pl.Profile.Name),
+			"up", "-d", "--force-recreate", "--remove-orphans",
 		},
 		WD:   pl.WorkingDir,
 		Env:  NewShellVars(pl.metadata.Variables),
@@ -188,10 +190,12 @@ func (pl *DockerComposePlanner) stopPlan() ([]Executable, error) {
 	}
 	plan = append(plan, pre...)
 
-	// step 2 docker compose stop
-	plan = append(plan, &ShellExecutable{
-		Cmds: []string{
-			fmt.Sprintf(`docker compose -f "%s" -p "%s" down --remove-orphans`, pl.metadata.ComposePath, pl.Profile.Name),
+	// step 2 docker compose down
+	plan = append(plan, &ComposeShellExecutable{
+		Args: []string{
+			fmt.Sprintf(`-f "%s"`, pl.metadata.ComposePath),
+			fmt.Sprintf(`-p "%s"`, pl.Profile.Name),
+			"down", "--remove-orphans",
 		},
 		WD:   pl.WorkingDir,
 		Env:  NewShellVars(pl.metadata.Variables),

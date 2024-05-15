@@ -79,6 +79,11 @@ type ContainerMonitorExecutable struct {
 }
 
 func (exec *ContainerMonitorExecutable) Exec(ctx context.Context, opts ExecOption) error {
+	if opts.DryRun {
+		fmt.Printf("- %v\n", exec)
+		return nil
+	}
+
 	ctx, cancelFn := context.WithCancel(ctx)
 	defer cancelFn()
 	// prepare

@@ -28,6 +28,10 @@ func (exec ShellExecutable) Exec(ctx context.Context, opts ExecOption) error {
 	if len(exec.Cmds) == 0 {
 		return nil
 	}
+	if opts.DryRun {
+		fmt.Printf("- %v\n", exec)
+		return nil
+	}
 	rc, e := cmdutils.RunShellCommands(ctx,
 		cmdutils.ShellShowCmd(opts.Verbose),
 		cmdutils.ShellDir(exec.WD),
@@ -45,7 +49,7 @@ func (exec ShellExecutable) Exec(ctx context.Context, opts ExecOption) error {
 
 func (exec ShellExecutable) String() string {
 	if len(exec.Desc) == 0 {
-		exec.Desc = "Shell"
+		exec.Desc = "shell"
 	}
 	switch {
 	case len(exec.Cmds) == 1:
@@ -72,6 +76,10 @@ func (exec MkdirExecutable) Exec(ctx context.Context, opts ExecOption) error {
 	if len(exec.Paths) == 0 {
 		return nil
 	}
+	if opts.DryRun {
+		fmt.Printf("- %v\n", exec)
+		return nil
+	}
 	for _, p := range exec.Paths {
 		if opts.Verbose {
 			logger.WithContext(ctx).Debugf(`creating direcotry: %s`, p)
@@ -95,5 +103,51 @@ func (exec MkdirExecutable) String() string {
 		return "NONE"
 	default:
 		return fmt.Sprintf("%s: \n    %s", exec.Desc, strings.Join(exec.Paths, "\n    "))
+	}
+}
+
+// ComposeShellExecutable ShellExecutable variant with special dry-run strategy for docker compose CLI
+type ComposeShellExecutable struct {
+	Args []string
+	WD   string
+	Env  []string
+	Desc string
+}
+
+func (exec ComposeShellExecutable) Exec(ctx context.Context, opts ExecOption) error {
+	if len(exec.Args) == 0 {
+		return nil
+	}
+	cmd := "docker compose " + strings.Join(exec.Args, " ")
+	if opts.DryRun {
+		cmd = cmd + " --dry-run"
+		fmt.Printf("- %v\n", exec)
+		opts.Verbose = false
+	}
+
+	rc, e := cmdutils.RunShellCommands(ctx,
+		cmdutils.ShellShowCmd(opts.Verbose),
+		cmdutils.ShellDir(exec.WD),
+		cmdutils.ShellEnv(exec.Env...),
+		cmdutils.ShellCmd(cmd),
+	)
+	switch {
+	case e != nil:
+		return e
+	case rc != 0:
+		return fmt.Errorf("shell exited with non-zero code [%d]", rc)
+	}
+	return nil
+}
+
+func (exec ComposeShellExecutable) String() string {
+	if len(exec.Desc) == 0 {
+		exec.Desc = "docker compose"
+	}
+	switch {
+	case len(exec.Args) == 0:
+		return "no-op"
+	default:
+		return fmt.Sprintf("%s: docker compose %s", exec.Desc, strings.Join(exec.Args, " "))
 	}
 }
