@@ -2,6 +2,7 @@ version: '3.9'
   
 networks:
   default:
+    name: "${PROJECT_NAME}-default"
     driver: bridge
     ipam:
       driver: default
@@ -173,6 +174,7 @@ services:
   # Post Start
   post_start_vault:
     image: "post-start:${PROJECT_NAME}-vault"
+    container_name: "${PROJECT_NAME}-post-start-vault"
     build:
       context: "./${RESOURCE_DIR}/post-start"
       dockerfile: Dockerfile-Vault
@@ -187,6 +189,7 @@ services:
 
   post_start_consul:
     image: "post-start:${PROJECT_NAME}-consul"
+    container_name: "${PROJECT_NAME}-post-start-consul"
     build:
       context: "./${RESOURCE_DIR}/post-start"
       dockerfile: Dockerfile-Consul

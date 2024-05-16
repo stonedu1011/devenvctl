@@ -17,14 +17,20 @@ import (
 
 const defaultComposeFile = `docker-compose.yml`
 
-type DockerComposePlanMetadata struct {
+type ComposePlanMetadata struct {
 	Profile       *devenv.Profile
-	Variables     []devenv.Variable
+	Variables     devenv.Variables
+	Vars          map[string]string
 	WorkingDir    string
 	DockerVersion types.Version
 	ComposePath   string
 	ResourceDir   string
 	LocalDataDir  string
+}
+
+// Project is an alias of Profile
+func (m ComposePlanMetadata) Project() *devenv.Profile {
+	return m.Profile
 }
 
 func NewDockerComposePlanner(p *devenv.Profile, wd string) *DockerComposePlanner {
@@ -39,7 +45,7 @@ type DockerComposePlanner struct {
 	// WorkingDir the working directory. Usually is the temporary dir configured by rootcmd.GlobalArgs
 	WorkingDir   string
 	Profile      *devenv.Profile
-	metadata     DockerComposePlanMetadata
+	metadata     ComposePlanMetadata
 	dockerClient *dockerclient.Client
 }
 
@@ -52,7 +58,7 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	}()
 
 	// generate metadata
-	pl.metadata = DockerComposePlanMetadata{
+	pl.metadata = ComposePlanMetadata{
 		Profile:      pl.Profile,
 		WorkingDir:   pl.WorkingDir,
 		LocalDataDir: pl.Profile.LocalDataDir,
@@ -67,11 +73,10 @@ func (pl *DockerComposePlanner) Prepare() (err error) {
 	}
 
 	// Variables
-	pl.metadata.Variables = devenv.Variables(pl.Profile)
-	pl.metadata.Variables = append(pl.metadata.Variables,
-		devenv.Variable{Name: devenv.VarLocalDataPath, Value: pl.Profile.LocalDataDir},
-		devenv.Variable{Name: devenv.VarProjectResource, Value: filepath.Base(srcResPath)},
-	)
+	pl.metadata.Variables = devenv.NewVariablesWithProfile(pl.Profile)
+	pl.metadata.Variables.Add(devenv.Variable{Name: devenv.VarLocalDataPath, Value: pl.Profile.LocalDataDir})
+	pl.metadata.Variables.Add(devenv.Variable{Name: devenv.VarProjectResource, Value: filepath.Base(srcResPath)})
+	pl.metadata.Vars = pl.metadata.Variables.KVMap()
 
 	// prepare a docker client (this client is not for docker compose)
 	var e error

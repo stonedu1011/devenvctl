@@ -48,7 +48,7 @@ func NewScriptHookExecutables(hook devenv.Hook, wd string, vars []string, search
 // Note: Currently, we don't support manually start containers. So the hook containers should be started.
 //       Therefore, only post-start containers are possible.
 func NewContainerHookExecutables(dockerClient *dockerclient.Client, phase devenv.HookPhase,
-	_ DockerComposePlanMetadata, cResolver ContainerResolver, hooks ...devenv.Hook) ([]Executable, error) {
+	_ ComposePlanMetadata, cResolver ContainerResolver, hooks ...devenv.Hook) ([]Executable, error) {
 
 	if phase != devenv.PhasePostStart {
 		return nil, fmt.Errorf(`container hooks are only supported in post-start phase`)

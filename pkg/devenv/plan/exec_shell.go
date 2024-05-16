@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"github.com/cisco-open/go-lanai/cmd/lanai-cli/cmdutils"
 	"github.com/stonedu1011/devenvctl/pkg/devenv"
-	"github.com/stonedu1011/devenvctl/pkg/utils"
 	"os"
 	"strings"
 )
 
-func NewShellVars(src []devenv.Variable) []string {
-	return utils.ConvertSlice[devenv.Variable, string](src, func(v devenv.Variable) string {
-		return v.String()
-	})
+func NewShellVars(src devenv.Variables) []string {
+	vars := make([]string, src.Len())
+	for i, k := range src.Keys() {
+		vars[i] = src.Get(k).String()
+	}
+	return vars
 }
 
 

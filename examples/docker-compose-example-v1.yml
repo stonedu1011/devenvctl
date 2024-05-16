@@ -2,6 +2,7 @@ version: '3.9'
   
 networks:
   default:
+    name: "{{.Profile.Name}}-default"
     driver: bridge
     ipam:
       driver: default

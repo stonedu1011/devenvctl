@@ -2,6 +2,7 @@ package devenv
 
 import (
 	"fmt"
+	"github.com/stonedu1011/devenvctl/pkg/utils"
 	"github.com/stonedu1011/devenvctl/pkg/utils/tmplutils"
 	"sort"
 )
@@ -15,15 +16,44 @@ func (v Variable) String() string {
 	return fmt.Sprintf(`%s=%s`, v.Name, v.Value)
 }
 
-func Variables(p *Profile) []Variable {
-	vars := make([]Variable, 0, len(p.Services)*5+2)
-	vars = append(vars, VariablesService(p)...)
-	vars = append(vars, VariablesBuildArg(p)...)
-	vars = append(vars, VariablesGlobal(p)...)
+type Variables struct {
+	*utils.OrderedMap[string, Variable]
+}
+
+func (v Variables) Add(vars ...Variable) {
+	for i := range vars {
+		v.OrderedMap.Set(vars[i].Name, vars[i])
+	}
+}
+
+func (v Variables) List() []Variable {
+	vars := make([]Variable, 0, v.Len())
+	for _, k := range v.Keys() {
+		vars = append(vars, v.Get(k))
+	}
 	return vars
 }
 
-func VariablesBuildArg(p *Profile) []Variable {
+func (v Variables) KVMap() map[string]string {
+	vars := map[string]string{}
+	for _, k := range v.Keys() {
+		entry := v.Get(k)
+		vars[entry.Name] = entry.Value
+	}
+	return vars
+}
+
+func NewVariablesWithProfile(p *Profile) Variables {
+	vars := Variables{
+		OrderedMap: utils.NewOrderedMapWithCap[string, Variable](len(p.Services)*5+5),
+	}
+	vars.Add(ResolveServiceVars(p)...)
+	vars.Add(ResolveBuildArgs(p)...)
+	vars.Add(ResolveGlobalVars(p)...)
+	return vars
+}
+
+func ResolveBuildArgs(p *Profile) []Variable {
 	vars := make([]Variable, 0, len(p.Services)*3)
 	for _, s := range p.Services {
 		for arg, v := range s.BuildArgs {
@@ -37,7 +67,7 @@ func VariablesBuildArg(p *Profile) []Variable {
 	return vars
 }
 
-func VariablesService(p *Profile) []Variable {
+func ResolveServiceVars(p *Profile) []Variable {
 	vars := make([]Variable, 0, len(p.Services)*2)
 	for _, s := range p.Services {
 		vars = append(vars,
@@ -51,7 +81,7 @@ func VariablesService(p *Profile) []Variable {
 	return vars
 }
 
-func VariablesGlobal(p *Profile) []Variable {
+func ResolveGlobalVars(p *Profile) []Variable {
 	vars := []Variable{
 		{Name: VarProjectName, Value: p.Name},
 	}

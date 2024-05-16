@@ -39,7 +39,7 @@ func Run(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	vars := devenv.VariablesBuildArg(rootcmd.LoadedProfile)
+	vars := devenv.ResolveBuildArgs(rootcmd.LoadedProfile)
 	if e := tmplutils.Print(tmpls.OutputTemplate.Lookup("build_args.tmpl"), vars); e != nil {
 		return e
 	}

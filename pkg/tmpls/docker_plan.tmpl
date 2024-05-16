@@ -6,7 +6,7 @@
 [{{"DEBUG"|gray}}] Docker Compose:
        Config: {{.ComposePath}}
     Variables:
-{{- range .Variables}}
+{{- range .Variables.List}}
         {{pad 30 .Name}} = {{.Value}}
 {{- end}}
 
