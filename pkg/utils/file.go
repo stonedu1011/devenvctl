@@ -49,6 +49,9 @@ func copyEmbedDir(srcFS embed.FS, src, dst string) error {
 			return e
 		}
 		dstPath := filepath.Join(dst, relPath)
+		// Note: Metadata like permission bits and creation time is not preserved in embed.FS.
+		//       To keep it simple, we'll use 0755.
+		//       The alternative could be tar file, but it would require additional packaging during install
 		if d.IsDir() {
 			if e := os.MkdirAll(dstPath, 0755); e != nil {
 				return e
@@ -58,7 +61,7 @@ func copyEmbedDir(srcFS embed.FS, src, dst string) error {
 			if e != nil {
 				return e
 			}
-			if e := os.WriteFile(dstPath, data, d.Type()); e != nil {
+			if e := os.WriteFile(dstPath, data, 0755); e != nil {
 				return e
 			}
 		}
